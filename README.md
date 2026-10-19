@@ -10,24 +10,25 @@ No Windows, abra **Jogar.cmd**. O iniciador usa o Godot instalado na pasta Downl
 - Espaço: saltitar. Shift: caminhar mais rápido.
 - E: recolher um item próximo ou embarcar na nave.
 - E na estufa: consumir uma refeição e reabastecer alimentos.
-- Tab: alternar a bússola entre descobertas, base e estufa.
 - Esc: pausar. Botão ♪: silenciar música e efeitos.
 
 ## Um passeio completo
 
-Reúna 6 pedras de regolito, 6 peças para a antena e 6 cápsulas de suprimentos. Os itens estão espalhados por toda a esfera, inclusive no outro hemisfério. A bússola mostra a direção e a distância pela superfície até a próxima descoberta. Ao completar a coleta, a nave desce perto do jogador. Aproxime-se e pressione E para embarcar. Você pode reiniciar pela tela final.
+Reúna 6 pedras de regolito, 6 peças para a antena e 6 galões de combustível para abastecer o resgate. Os itens estão espalhados por toda a esfera, inclusive no outro hemisfério. Não há seta de navegação ou mensagem central a cada coleta: os três contadores e o som confirmam a descoberta. Ao completar tudo, a nave desce perto do jogador. Aproxime-se e pressione E para embarcar.
 
 Sem combate ou perda permanente de progresso. Oxigênio e alimento exigem pequenas viagens de reabastecimento: a base repõe O₂ automaticamente; uma segunda base, a estufa, fica a aproximadamente 20 metros de arco da original e oferece refeições com E. A estufa não protege da radiação.
 
-O oxigênio dura aproximadamente 67 segundos fora da base, e alimentos duram cerca de três minutos. Após 70 segundos de exploração, um alerta dá 25 segundos para voltar à base antes de uma onda solar de 20 segundos. O ciclo se repete; pausa e introdução congelam os relógios. Dentro do perímetro da base a exposição diminui, fora aumenta. Se O₂, comida ou proteção falharem, o traje retorna automaticamente à base mantendo todos os itens. A bússola prioriza o abrigo em alertas e O₂ baixo, ou a estufa quando há fome.
+O oxigênio dura aproximadamente **29 segundos** fora da base; alimentos duram cerca de **56 segundos**. Avisos visuais e sonoros alertam sobre reservas baixas; abaixo de 15%, o aviso pisca. A base repõe O₂ em quatro segundos. A estufa oferece refeições com E.
 
-Três cartões grandes mostram os objetivos 0/6. A orientação do astronauta respeita a frente +Z do modelo Kenney, enquanto movimento e bússola usam os eixos da câmera projetados na esfera. A decoração foi reduzida para dar mais espaço à exploração.
+Após 45 segundos de exploração, uma sirene anuncia **10 segundos de aviso** antes de uma onda solar que percorre o planeta por **10 segundos**, com som de propagação. O ciclo se repete; pausa e introdução congelam os relógios e pausam o áudio. A frente nasce no hemisfério oposto à base e exclui geometricamente o abrigo. Apenas tocar a faixa causa dano: −35 de O₂ e −12 de alimento, uma vez por onda. O restante da superfície é seguro antes e depois da passagem. O teste de contato considera o deslocamento entre quadros. Se O₂ ou alimento acabam, o traje retorna à base preservando os itens.
+
+Três cartões grandes mostram os objetivos 0/6. A orientação do astronauta respeita a frente +Z do modelo Kenney e o movimento usa os eixos da câmera projetados na esfera.
 
 É uma experiência didática, não uma simulação física de Marte ou engenharia real. O progresso não persiste após fechar o jogo.
 
 ## Arte e áudio
 
-Modelos **Kenney Space Kit 2.0 (CC0)** reutilizados do Last Light conforme solicitado. Licença em `assets/space/License.txt`, origem em https://kenney.nl/assets/space-kit e proveniência em `docs/ASSETS.md`. O planeta, acampamento, nave, iluminação e interface são montados no projeto. Música e sons de coleta são sintetizados localmente.
+Modelos **Kenney Space Kit 2.0 (CC0)** reutilizados do Last Light conforme solicitado. Licença em `assets/space/License.txt`, origem em https://kenney.nl/assets/space-kit e proveniência em `docs/ASSETS.md`. O planeta, acampamento, nave, iluminação e interface são montados no projeto. Trilha original de 32 notas, baixo suave, sons de coleta, sirene e propagação são sintetizados localmente; não há gravações ou músicas de terceiros. Veja `docs/AUDIO.md`.
 
 ## Verificação
 
