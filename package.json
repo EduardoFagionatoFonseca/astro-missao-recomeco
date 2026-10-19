@@ -1,0 +1,1 @@
+{"name":"astro-missao-recomeco","version":"1.0.0","private":true,"scripts":{"start":"node server.cjs","check":"node --check game.js && node check.cjs"}}
