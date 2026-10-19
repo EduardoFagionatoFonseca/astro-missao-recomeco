@@ -2,7 +2,7 @@
 
 Todos os sons desta versão são gerados no próprio Godot, sem downloads ou material musical de terceiros:
 
-- Música: melodia original de 32 notas com timbre de sino e baixo suave, em um ciclo de 16 segundos.
+- Música: ambiente espacial original de 32 segundos, com acordes lentos, timbre de órgão suave, transições de 2,5 segundos, drone grave e camadas aéreas. Substitui a antiga melodia de sinos; não reproduz uma composição de filme.
 - Alerta: sinal de duas frequências no começo e a cada segundo do aviso solar; usado também nos limiares de O₂ e alimento baixos/críticos.
 - Propagação solar: ruído filtrado e osciladores graves, tocados em um canal separado apenas durante a onda.
 - Coletas: pequenos sinos, preservados sem mensagem central.
