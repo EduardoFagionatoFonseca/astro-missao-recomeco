@@ -9,13 +9,21 @@ No Windows, abra **Jogar.cmd**. O iniciador usa o Godot instalado na pasta Downl
 - WASD ou setas: caminhar por toda a superfície esférica.
 - Espaço: saltitar. Shift: caminhar mais rápido.
 - E: recolher um item próximo ou embarcar na nave.
+- E na estufa: consumir uma refeição e reabastecer alimentos.
+- Tab: alternar a bússola entre descobertas, base e estufa.
 - Esc: pausar. Botão ♪: silenciar música e efeitos.
 
 ## Um passeio completo
 
 Reúna 6 pedras de regolito, 6 peças para a antena e 6 cápsulas de suprimentos. Os itens estão espalhados por toda a esfera, inclusive no outro hemisfério. A bússola mostra a direção e a distância pela superfície até a próxima descoberta. Ao completar a coleta, a nave desce perto do jogador. Aproxime-se e pressione E para embarcar. Você pode reiniciar pela tela final.
 
-Sem combate, limite de tempo ou recursos que se esgotam. O tema educacional aparece no propósito dos materiais: proteção do abrigo, comunicação e reservas durante a espera. É uma experiência de exploração, não uma simulação física de Marte ou engenharia de missão. O progresso não persiste após fechar o jogo.
+Sem combate ou perda permanente de progresso. Oxigênio e alimento exigem pequenas viagens de reabastecimento: a base repõe O₂ automaticamente; uma segunda base, a estufa, fica a aproximadamente 20 metros de arco da original e oferece refeições com E. A estufa não protege da radiação.
+
+O oxigênio dura aproximadamente 67 segundos fora da base, e alimentos duram cerca de três minutos. Após 70 segundos de exploração, um alerta dá 25 segundos para voltar à base antes de uma onda solar de 20 segundos. O ciclo se repete; pausa e introdução congelam os relógios. Dentro do perímetro da base a exposição diminui, fora aumenta. Se O₂, comida ou proteção falharem, o traje retorna automaticamente à base mantendo todos os itens. A bússola prioriza o abrigo em alertas e O₂ baixo, ou a estufa quando há fome.
+
+Três cartões grandes mostram os objetivos 0/6. A orientação do astronauta respeita a frente +Z do modelo Kenney, enquanto movimento e bússola usam os eixos da câmera projetados na esfera. A decoração foi reduzida para dar mais espaço à exploração.
+
+É uma experiência didática, não uma simulação física de Marte ou engenharia real. O progresso não persiste após fechar o jogo.
 
 ## Arte e áudio
 

@@ -31,14 +31,11 @@ var hud: CanvasLayer
 var intro: PanelContainer
 var ending: PanelContainer
 var pause_panel: PanelContainer
-var progress_label: Label
 var counts: Array[Label] = []
-var objective_label: Label
 var tip_label: Label
 var compass_label: Label
 var toast_label: Label
 var toast_time := 0.0
-var progress_bar: ProgressBar
 var music: AudioStreamPlayer
 var sound: AudioStreamPlayer
 var muted := false
@@ -46,6 +43,20 @@ var auto_check := false
 var capture := false
 var check_time := 0.0
 var pad := Vector2.ZERO
+var oxygen := 100.0
+var food := 100.0
+var exposure := 0.0
+var camp_normal := Vector3(0.07, 1, 0.12).normalized()
+var garden_normal := Vector3(0.9, -0.15, -0.5).normalized()
+var solar_clock := 0.0
+var solar_phase := "calm"
+var solar_remaining := 70.0
+var oxygen_label: Label
+var food_label: Label
+var solar_label: Label
+var navigation := 0
+var rescues := 0
+var solar_wave: MeshInstance3D
 
 func _ready() -> void:
 	rng.seed = 60318
@@ -58,6 +69,8 @@ func _ready() -> void:
 	avatar = Node3D.new()
 	add_child(avatar)
 	astronaut = _asset("astronautA", avatar, 1.8)
+	# Kenney's astronaut faces +Z; the movement frame faces -Z.
+	astronaut.rotation.y = PI
 	avatar.position = normal * R
 	_align(avatar, normal, north)
 	camera = Camera3D.new()
@@ -73,6 +86,7 @@ func _ready() -> void:
 		_start()
 	if auto_check:
 		_assert_world()
+		_assert_survival()
 
 func _material(color: Color, glow: float = 0.0) -> StandardMaterial3D:
 	var mat := StandardMaterial3D.new()
@@ -180,26 +194,34 @@ func _build_planet() -> void:
 	var terrain := _mesh(self, mesh, Color("bd7f61"))
 	terrain.name = "LittleMars"
 	# All landmarks sit directly on the sphere; there is no flat hidden terrain.
-	for i in range(130):
-		var n := _fibonacci(i, 130)
+	for i in range(65):
+		var n := _fibonacci(i, 65)
 		if n.dot(Vector3.UP) > 0.975:
 			continue
 		var root := _surface(n)
 		root.rotate_object_local(Vector3.UP, rng.randf() * TAU)
 		var stone := _asset("rock_largeA", root, rng.randf_range(0.12, 0.65))
 		stone.scale *= Vector3(1.2, 0.7, 1.1)
-	for i in range(15):
-		var n := _fibonacci(i, 15)
+	for i in range(8):
+		var n := _fibonacci(i, 8)
 		if n.dot(Vector3.UP) > 0.93:
 			continue
 		var root := _surface(n)
 		var crater := _asset("craterLarge", root, 0.13)
 		crater.scale *= 0.85
-	for i in range(32):
-		var angle := float(i) / 32 * TAU
+	for i in range(16):
+		var angle := float(i) / 16 * TAU
 		var n := Vector3(sin(angle) * 0.22, 1.0, cos(angle) * 0.22).normalized()
 		var root := _surface(n)
 		_cylinder(root, 0.045, 0.23, Color("eac49e"), Vector3(0, 0.12, 0))
+	var wave_mesh := TorusMesh.new()
+	wave_mesh.inner_radius = R + 0.05
+	wave_mesh.outer_radius = R + 0.18
+	wave_mesh.rings = 72
+	wave_mesh.ring_segments = 8
+	solar_wave = _mesh(self, wave_mesh, PEACH)
+	solar_wave.material_override = _material(Color("efac76"), 0.5)
+	solar_wave.hide()
 
 func _fibonacci(i: int, count: int) -> Vector3:
 	var y := 1.0 - (float(i) + 0.5) / float(count) * 2.0
@@ -208,7 +230,7 @@ func _fibonacci(i: int, count: int) -> Vector3:
 	return Vector3(cos(a) * r, y, sin(a) * r)
 
 func _build_camp() -> void:
-	var camp := _surface(Vector3(0.07, 1, 0.12).normalized())
+	var camp := _surface(camp_normal)
 	var dome := _ball(camp, 0.95, Color("d5d8c6"), Vector3(-0.8, 0.33, 0))
 	dome.scale.y = 0.75
 	_box(camp, Vector3(0.6, 0.65, 0.35), Color("617e86"), Vector3(-0.8, 0.32, -0.8))
@@ -220,6 +242,25 @@ func _build_camp() -> void:
 		var panel := _box(camp, Vector3(0.7, 0.07, 0.9), Color("648eab"), Vector3(-2.2 - i * 0.8, 0.32, 0))
 		panel.rotation.z = -0.2
 		_cylinder(camp, 0.04, 0.3, CREAM, Vector3(-2.2 - i * 0.8, 0.15, 0))
+	var garden := _surface(garden_normal)
+	_cylinder(garden, 1.5, 0.18, Color("738a7c"), Vector3(0, 0.09, 0))
+	var glass := _ball(garden, 1.4, Color("a9d0bc"), Vector3(0, 0.55, 0))
+	glass.scale.y = 0.7
+	var glass_mat := _material(Color(0.61, 0.82, 0.73, 0.3))
+	glass_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	glass.material_override = glass_mat
+	for x in [-0.65, 0.0, 0.65]:
+		_box(garden, Vector3(0.4, 0.2, 1.2), Color("766d55"), Vector3(x, 0.3, 0))
+		for z in [-0.4, 0.0, 0.4]:
+			_ball(garden, 0.18, Color("87b17b"), Vector3(x, 0.65, z))
+	_box(garden, Vector3(0.65, 0.8, 0.22), Color("5d8b7c"), Vector3(0, 0.4, -1.25))
+	var sign := Label3D.new()
+	sign.text = "ESTUFA"
+	sign.font_size = 42
+	sign.pixel_size = 0.008
+	sign.position = Vector3(0, 1.9, 0)
+	sign.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	garden.add_child(sign)
 
 func _build_items() -> void:
 	for i in range(TOTAL):
@@ -271,6 +312,7 @@ func _process(delta: float) -> void:
 		return
 	elapsed += delta
 	_update_movement(delta)
+	_update_survival(delta)
 	_update_items(delta)
 	_update_ship(delta)
 	_update_hud(delta)
@@ -286,7 +328,7 @@ func _update_movement(delta: float) -> void:
 	var old := normal
 	var forward := camera.global_basis.y.slide(normal).normalized()
 	if forward.length() < 0.1: forward = north
-	var right := forward.cross(normal).normalized()
+	var right := camera.global_basis.x.slide(normal).normalized()
 	var direction := (right * input.x + forward * input.y)
 	if direction.length() > 0.05:
 		var speed := 3.0
@@ -336,6 +378,12 @@ func _update_items(_delta: float) -> void:
 			tip_label.text = "WASD / setas: caminhar   ·   Espaço: saltitar   ·   E: recolher"
 	if ship_landed:
 		tip_label.text = "O resgate chegou! Aproxime-se da nave e pressione E para embarcar."
+	elif _at_garden():
+		tip_label.text = "[ E ] Comer na estufa · reabastecer alimentos"
+	elif _at_camp():
+		tip_label.text = "Abrigo seguro · oxigênio recarregando"
+	elif near < 0 or normal.dot(items[near].normal) <= cos(1.25 / R):
+		tip_label.text = ""
 
 func _collect(index: int) -> void:
 	if index < 0 or items[index].taken: return
@@ -388,14 +436,86 @@ func _unhandled_key_input(event: InputEvent) -> void:
 			hop_velocity = 2.4
 		if event.physical_keycode == KEY_E:
 			_interact()
+		if event.physical_keycode == KEY_TAB:
+			navigation = (navigation + 1) % 3
 
 func _interact() -> void:
+	if _at_garden() and food < 99.0:
+		food = 100.0
+		_chime(550)
+		_toast("Uma refeição fresca. Alimentos reabastecidos.")
+		return
 	if ship_landed and normal.dot(ship_normal) > 0.975:
 		_finish()
 		return
 	var near := _nearest()
 	if near >= 0 and normal.dot(items[near].normal) > cos(1.25 / R):
 		_collect(near)
+
+func _at_camp() -> bool:
+	return normal.dot(camp_normal) > cos(2.7 / R)
+
+func _at_garden() -> bool:
+	return normal.dot(garden_normal) > cos(2.4 / R)
+
+func _update_survival(delta: float) -> void:
+	if _at_camp():
+		oxygen = minf(100.0, oxygen + delta * 22.0)
+		exposure = maxf(0.0, exposure - delta * 20.0)
+	else:
+		oxygen = maxf(0.0, oxygen - delta * 1.5)
+	food = maxf(0.0, food - delta * 0.55)
+	solar_clock += delta
+	if solar_phase == "calm":
+		solar_remaining = 70.0 - solar_clock
+		if solar_remaining <= 0.0:
+			solar_phase = "warning"
+			solar_clock = 0.0
+			solar_remaining = 25.0
+			_toast("Alerta solar! Você tem 25 segundos para voltar ao abrigo da base.")
+	elif solar_phase == "warning":
+		solar_remaining = 25.0 - solar_clock
+		if solar_remaining <= 0.0:
+			solar_phase = "active"
+			solar_clock = 0.0
+			solar_remaining = 20.0
+			_toast("Onda de radiação em curso. Permaneça na base até o sinal verde.")
+	else:
+		solar_remaining = 20.0 - solar_clock
+		if not _at_camp(): exposure = minf(100.0, exposure + delta * 9.0)
+		if solar_remaining <= 0.0:
+			solar_phase = "calm"
+			solar_clock = 0.0
+			solar_remaining = 70.0
+			exposure = 0.0
+			_toast("A onda passou. É seguro explorar novamente.")
+	solar_wave.visible = solar_phase == "active"
+	if solar_wave.visible:
+		var latitude := cos(clampf(solar_clock / 20.0, 0, 1) * PI)
+		solar_wave.position.y = latitude * R
+		var ring_scale := maxf(0.03, sqrt(maxf(0, 1.0 - latitude * latitude)))
+		solar_wave.scale = Vector3(ring_scale, 1, ring_scale)
+	if oxygen <= 0.0:
+		_emergency_return("Oxigênio esgotado. O traje levou você de volta ao abrigo.")
+	elif food <= 0.0:
+		_emergency_return("Você ficou sem energia. Após descansar, visite a estufa para comer.")
+	elif exposure >= 100.0:
+		_emergency_return("Exposição solar alta. Retorno de emergência ao abrigo.")
+
+func _emergency_return(reason: String) -> void:
+	rescues += 1
+	normal = camp_normal
+	north = Vector3.FORWARD.slide(normal).normalized()
+	hop = 0.0
+	hop_velocity = 0.0
+	oxygen = 100.0
+	food = maxf(food, 35.0)
+	exposure = 0.0
+	avatar.position = normal * R
+	_align(avatar, normal, north)
+	camera.position = normal * 32.0 - north * 24.0
+	camera.look_at(normal * 2.0, north)
+	_toast(reason + " Seus itens foram preservados.")
 
 func _style(color: Color, border := Color.TRANSPARENT, radius := 18) -> StyleBoxFlat:
 	var box := StyleBoxFlat.new()
@@ -452,57 +572,53 @@ func _build_ui() -> void:
 	hud = CanvasLayer.new()
 	add_child(hud)
 	var root := Control.new()
-	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	hud.add_child(root)
-	var header := VBoxContainer.new()
-	header.position = Vector2(48, 34)
-	header.add_theme_constant_override("separation", 7)
-	root.add_child(header)
-	header.add_child(_label("✦  A S T R O", 30))
-	header.add_child(_label("UM PEQUENO RECOMEÇO", 12, PEACH))
-	header.add_child(_label("Um mundo pequeno. Uma viagem de volta para casa.", 14, MUTED))
-	var card := PanelContainer.new()
-	card.position = Vector2(1080, 34)
-	card.size = Vector2(310, 220)
-	card.add_theme_stylebox_override("panel", _style(Color("15283ae8"), Color("4c5c68")))
-	root.add_child(card)
-	var v := VBoxContainer.new()
-	v.add_theme_constant_override("separation", 10)
-	card.add_child(v)
-	v.add_child(_label("PREPARAR O RESGATE", 13, PEACH))
-	progress_label = _label("0 / 18 descobertas", 23)
-	v.add_child(progress_label)
-	progress_bar = ProgressBar.new()
-	progress_bar.max_value = TOTAL
-	progress_bar.show_percentage = false
-	progress_bar.custom_minimum_size.y = 6
-	var bar_background := _style(Color("354754"), Color.TRANSPARENT, 3)
-	var bar_fill := _style(MINT, Color.TRANSPARENT, 3)
-	for bar_style in [bar_background, bar_fill]:
-		bar_style.content_margin_left = 0
-		bar_style.content_margin_right = 0
-		bar_style.content_margin_top = 0
-		bar_style.content_margin_bottom = 0
-	progress_bar.add_theme_stylebox_override("background", bar_background)
-	progress_bar.add_theme_stylebox_override("fill", bar_fill)
-	v.add_child(progress_bar)
-	for text in ["Regolito para o abrigo", "Peças para a antena", "Suprimentos da expedição"]:
-		var line := _label(text + "   0 / 6", 14, MUTED)
-		counts.append(line)
-		v.add_child(line)
-	objective_label = _label("Siga os pequenos brilhos. Explore no seu ritmo.", 16, CREAM)
-	objective_label.position = Vector2(48, 770)
-	root.add_child(objective_label)
-	compass_label = _label("", 14, PEACH)
-	compass_label.position = Vector2(48, 801)
+	var logo := _label("✦ ASTRO", 25)
+	logo.position = Vector2(42, 28)
+	root.add_child(logo)
+	var vitals := VBoxContainer.new()
+	vitals.position = Vector2(42, 76)
+	vitals.add_theme_constant_override("separation", 8)
+	root.add_child(vitals)
+	oxygen_label = _label("O₂  100%", 21, MINT)
+	food_label = _label("Alimento  100%", 18, PEACH)
+	vitals.add_child(oxygen_label)
+	vitals.add_child(food_label)
+	var objectives := HBoxContainer.new()
+	objectives.position = Vector2(917, 30)
+	objectives.add_theme_constant_override("separation", 12)
+	root.add_child(objectives)
+	var names := ["REGOLITO", "ANTENA", "SUPRIMENTOS"]
+	for i in range(3):
+		var card := PanelContainer.new()
+		card.custom_minimum_size = Vector2(150, 100)
+		card.add_theme_stylebox_override("panel", _style(Color("15283ad9"), Color("425665"), 15))
+		objectives.add_child(card)
+		var column := VBoxContainer.new()
+		card.add_child(column)
+		var count_label := _label("0/6", 34, [PEACH, MINT, CREAM][i])
+		count_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		counts.append(count_label)
+		column.add_child(count_label)
+		var name_label := _label(names[i], 11, MUTED)
+		name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		column.add_child(name_label)
+	solar_label = _label("", 19, PEACH)
+	solar_label.position = Vector2(330, 45)
+	solar_label.size = Vector2(570, 70)
+	solar_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	solar_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	root.add_child(solar_label)
+	compass_label = _label("", 16, PEACH)
+	compass_label.position = Vector2(42, 804)
 	root.add_child(compass_label)
-	tip_label = _label("", 14, MUTED)
-	tip_label.position = Vector2(48, 846)
+	tip_label = _label("", 16, CREAM)
+	tip_label.position = Vector2(42, 840)
 	root.add_child(tip_label)
 	toast_label = _label("", 17, MINT)
-	toast_label.position = Vector2(380, 138)
-	toast_label.size = Vector2(680, 75)
+	toast_label.position = Vector2(340, 138)
+	toast_label.size = Vector2(740, 75)
 	toast_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	toast_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	root.add_child(toast_label)
@@ -514,12 +630,12 @@ func _build_ui() -> void:
 	mute_button.position = Vector2(1268, 817)
 	mute_button.custom_minimum_size.x = 54
 	root.add_child(mute_button)
-	intro = _modal("Às vezes, basta um pequeno passo.", "Sua cápsula fez um pouso inesperado neste pequeno planeta vermelho. A equipe de resgate está por perto — só precisamos preparar o lugar para esperar.\n\nExplore o planeta, reúna 6 pedras de regolito, 6 peças de antena e 6 suprimentos. Quando tudo estiver pronto, a nave vem buscar você.\n\nSem combate. Sem pressa. Só você e um céu cheio de estrelas.")
-	intro.get_child(0).add_child(_button("Vamos dar uma volta  →", _start))
-	pause_panel = _modal("Uma pausa entre as estrelas.", "Seu pequeno planeta espera por você.\n\nWASD ou setas: caminhar\nEspaço: saltitar · E: recolher / embarcar\nShift: caminhar mais rápido · Esc: pausar\n♪: ligar ou desligar a música")
+	intro = _modal("Uma pequena aventura, com cuidado.", "Reúna 6 pedras, 6 peças da antena e 6 suprimentos para chamar o resgate.\n\nO oxigênio acaba durante a exploração: volte à base para recarregar. A estufa, do outro lado do planeta, oferece refeições frescas — pressione E para comer.\n\nQuando chegar um alerta solar, volte à base em até 25 segundos e espere a onda passar.\n\nWASD: mover · Espaço: saltitar · E: interagir\nTab: alternar direção entre itens, base e estufa.")
+	intro.get_child(0).add_child(_button("Vamos explorar  →", _start))
+	pause_panel = _modal("Uma pausa entre as estrelas.", "WASD ou setas: caminhar\nEspaço: saltitar · E: recolher, comer ou embarcar\nTab: apontar para itens, base ou estufa\nShift: andar mais rápido · Esc: pausar\n\nA base repõe oxigênio e protege da radiação.\nA estufa fornece alimentos, mas não é um abrigo solar.")
 	pause_panel.get_child(0).add_child(_button("Continuar explorando  →", _toggle_pause))
 	pause_panel.hide()
-	ending = _modal("Toda pequena descoberta conta.", "Você preparou um abrigo com regolito, recuperou as peças da antena e reuniu suprimentos para esperar em segurança.\n\nNa exploração espacial, proteção, comunicação e reservas fazem parte do caminho para casa.\n\nObrigado por cuidar deste pequeno mundo.")
+	ending = _modal("Toda pequena descoberta conta.", "Você reuniu materiais para o resgate e cuidou das reservas do traje.\n\nOxigênio exige planejamento de ida e volta. Alimentos sustentam a exploração. Um abrigo adequado protege da radiação.\n\nSua viagem de volta para casa começa agora.")
 	ending.get_child(0).add_child(_button("Explorar outra vez  ↻", func(): get_tree().reload_current_scene()))
 	ending.hide()
 
@@ -533,27 +649,42 @@ func _toggle_pause() -> void:
 	pause_panel.visible = paused
 
 func _update_hud(delta: float) -> void:
-	progress_label.text = str(collected) + " / 18 descobertas"
-	progress_bar.value = collected
-	var names := ["Regolito para o abrigo", "Peças para a antena", "Suprimentos da expedição"]
 	for i in range(3):
-		counts[i].text = names[i] + "   " + str(found[i]) + " / 6"
+		counts[i].text = str(found[i]) + "/6"
 		counts[i].add_theme_color_override("font_color", MINT if found[i] == 6 else MUTED)
+	oxygen_label.text = "O₂  " + str(ceili(oxygen)) + "%"
+	food_label.text = "Alimento  " + str(ceili(food)) + "%"
+	oxygen_label.add_theme_color_override("font_color", PEACH if oxygen < 35 else MINT)
+	food_label.add_theme_color_override("font_color", PEACH if food < 30 else CREAM)
+	solar_label.text = ""
+	if solar_phase == "warning":
+		solar_label.text = "☼ ALERTA SOLAR · " + str(ceili(solar_remaining)) + " s para buscar abrigo"
+	elif solar_phase == "active":
+		solar_label.text = ("☼ PROTEGIDO NA BASE" if _at_camp() else "☼ RADIAÇÃO · VOLTE À BASE") + " · " + str(ceili(solar_remaining)) + " s"
 	toast_time = maxf(0, toast_time - delta)
 	toast_label.modulate.a = minf(1.0, toast_time)
 	var near := _nearest()
-	if near >= 0:
-		var direction: Vector3 = items[near].normal.slide(normal).normalized()
+	var target := Vector3.ZERO
+	var target_name := "Próxima descoberta"
+	if near >= 0: target = items[near].normal
+	if navigation == 1 or oxygen < 35 or solar_phase != "calm":
+		target = camp_normal
+		target_name = "Base · O₂ e abrigo"
+	elif navigation == 2 or food < 30:
+		target = garden_normal
+		target_name = "Estufa · alimento"
+	if ship != null and solar_phase == "calm" and oxygen >= 35:
+		target = ship_normal
+		target_name = "Nave de resgate"
+	if target != Vector3.ZERO:
+		var direction: Vector3 = target.slide(normal).normalized()
 		var right := camera.global_basis.x.slide(normal).normalized()
 		var up := camera.global_basis.y.slide(normal).normalized()
 		var angle := rad_to_deg(atan2(direction.dot(right), direction.dot(up)))
 		var arrows := ["↑", "↗", "→", "↘", "↓", "↙", "←", "↖"]
 		var arrow_index := posmod(roundi(angle / 45.0), 8)
-		var distance := acos(clampf(normal.dot(items[near].normal), -1, 1)) * R
-		compass_label.text = arrows[arrow_index] + "  Próxima descoberta · " + str(roundi(distance)) + " m"
-	elif ship != null:
-		objective_label.text = "Seu sinal atravessou as estrelas. O resgate está aqui."
-		compass_label.text = "Resgate pousando…" if not ship_landed else "Nave pronta · aproxime-se e pressione E"
+		var distance := acos(clampf(normal.dot(target), -1, 1)) * R
+		compass_label.text = arrows[arrow_index] + "  " + target_name + " · " + str(roundi(distance)) + " m   [Tab: destino]"
 
 func _toast(message: String) -> void:
 	toast_label.text = message
@@ -621,6 +752,17 @@ func _assert_world() -> void:
 		kinds[item.kind] += 1
 	assert(kinds == [6, 6, 6])
 	assert(absf(avatar.position.length() - R) < 0.01)
+	for input_direction in [Vector2(0, 1), Vector2(0, -1), Vector2(1, 0), Vector2(-1, 0)]:
+		normal = Vector3.UP
+		north = Vector3.FORWARD
+		camera.position = normal * 32.0 - north * 24.0
+		camera.look_at(normal * 2.0, north)
+		var expected: Vector3 = (camera.basis.x.slide(normal).normalized() * input_direction.x + camera.basis.y.slide(normal).normalized() * input_direction.y).normalized()
+		pad = input_direction
+		_update_movement(0.02)
+		assert((normal - Vector3.UP).normalized().dot(expected) > 0.99)
+		# Kenney +Z must face the same way as the actual displacement.
+		assert((avatar.basis * astronaut.basis * Vector3.BACK).normalized().dot(expected) > 0.99)
 	var crossed_hemisphere := false
 	pad = Vector2(0, 1)
 	for i in range(1800):
@@ -636,3 +778,52 @@ func _assert_world() -> void:
 	_align(avatar, normal, north)
 	camera.position = normal * 32.0 - north * 24.0
 	camera.look_at(normal * 2.0, north)
+
+func _assert_survival() -> void:
+	normal = Vector3.DOWN
+	oxygen = 100
+	food = 100
+	_update_survival(10)
+	assert(oxygen == 85.0)
+	assert(food < 100.0)
+	normal = camp_normal
+	_update_survival(1)
+	assert(oxygen == 100.0)
+	normal = garden_normal
+	food = 20
+	_interact()
+	assert(food == 100.0)
+	solar_clock = 69.9
+	solar_phase = "calm"
+	_update_survival(0.2)
+	assert(solar_phase == "warning")
+	solar_clock = 24.9
+	_update_survival(0.2)
+	assert(solar_phase == "active")
+	exposure = 0
+	normal = Vector3.DOWN
+	_update_survival(1)
+	assert(exposure > 0)
+	normal = camp_normal
+	_update_survival(1)
+	assert(exposure == 0.0)
+	solar_clock = 19.9
+	_update_survival(0.2)
+	assert(solar_phase == "calm")
+	normal = Vector3.DOWN
+	oxygen = 0.01
+	var before := collected
+	_update_survival(0.1)
+	assert(_at_camp() and oxygen == 100.0 and collected == before)
+	food = 0.01
+	_update_survival(0.1)
+	assert(food >= 35.0)
+	assert(not _at_garden())
+	food = 100
+	oxygen = 100
+	exposure = 0
+	solar_clock = 0
+	solar_phase = "calm"
+	solar_remaining = 70
+	toast_time = 0
+	print("PASS: camera-relative movement and facing in four directions; oxygen, meals, solar warning, exposure, shelter and emergency return")
