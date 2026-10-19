@@ -11,4 +11,12 @@ echo Ou defina GODOT_EXE com o caminho para o Godot.
 pause
 exit /b 1
 :launch
+echo Preparando seu pequeno planeta...
+"%GODOT_EXE%" --headless --editor --path "%~dp0." --import --quit
+if errorlevel 1 (
+echo Nao foi possivel importar o projeto. Abra project.godot no editor.
+pause
+exit /b 1
+)
 start "Astro - Um Pequeno Recomeco" "%GODOT_EXE%" --path "%~dp0."
+
