@@ -17,9 +17,13 @@ Base: main `f9259e0`. Ambiente: Windows, Godot 4.7.2, Chrome. Capturas geradas p
 
 ## Ajustes de sobrevivência e manutenção
 
-`tests/mission_balance.gd`, executado pelo smoke test, verifica proteção somente dentro do abrigo, tutorial solar sem repetição, pane elétrica após 75 s, desconexão após 100 s, mudança de frequência na nova sintonia, mensagens sem duplicação, velocidade fixa e alarmes separados. As barras passam a vermelho com pulsação suave; o céu clareia em vez de uma sirene repetitiva. A onda atravessa a base externa e termina normalmente enquanto o astronauta está no interior.
+`tests/mission_balance.gd`, executado pelo smoke test, verifica proteção somente dentro do abrigo, tutorial solar sem repetição, pane elétrica após 63,75 s, desconexão após 85 s, nova sintonia, mensagens únicas, velocidade de 3,78 m/s e alarmes separados.
 
-Capturas adicionais: `warning-preview.png`, `critical-preview.png` e `signal-preview.png` mostram o primeiro aviso solar, reservas críticas e o novo osciloscópio do sinalizador.
+`tests/axios_ui.gd` cobre produção de O₂ dependente de energia, reparo preventivo em 30%, previsão solar e aviso de bateria somente com rádio, descarte dos avisos sem conexão, janela iluminada, reservas de 105 unidades e guia pós-vídeo com todos os temporizadores suspensos. Confere também a área do guia (~70%) e as três miniaturas.
+
+O export Web foi conferido no Chrome e no Pixel 7 emulado: menu mínimo, vídeo, guia, exploração, interior e painel elétrico com o tema compartilhado. Os testes usam teclado/toque e capturas; as regras temporais são cobertas pelo smoke test do Godot.
+
+Capturas adicionais: `briefing-preview.png`, `window-preview.png` e `web-*-briefing.png` mostram o guia e a janela em radiação. Capturas de iterações anteriores permanecem como histórico e podem refletir temas antigos.
 
 Importação e exportação Web concluídas sem erros. `tests/web_smoke.cjs` abre o export local, inicia/pula o vídeo, entra na base, percorre o interior com teclado e exercita o joystick com toque emulado. Registra erros de console/página e capturas para inspeção. Como a interface é canvas, os testes usam coordenadas; confira as capturas junto ao console.
 

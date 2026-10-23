@@ -14,6 +14,7 @@ var active := false
 var fallback := false
 
 func _ready() -> void:
+	theme = preload("res://scripts/ui_theme.gd").create()
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var background := ColorRect.new()
 	background.color = Color("07111c")

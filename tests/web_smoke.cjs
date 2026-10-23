@@ -25,13 +25,16 @@ const {chromium, devices} = require(process.env.PLAYWRIGHT_MODULE || 'playwright
         const sy = box.y + y / 900 * box.height;
         if (mobile) await page.touchscreen.tap(sx,sy); else await page.mouse.click(sx,sy);
       };
-      await click(720,700);
+      await click(720,540);
       await page.waitForTimeout(1800);
       await page.screenshot({path:`docs/web-${mobile?'mobile':'desktop'}-video.png`});
       // Skip at the right edge, anchored to viewport rather than reference width.
       const box = await page.locator('canvas').boundingBox();
       if (mobile) await page.touchscreen.tap(box.x+box.width-65,box.y+35);
       else await page.keyboard.press('Space');
+      await page.waitForTimeout(600);
+      await page.screenshot({path:`docs/web-${mobile?'mobile':'desktop'}-briefing.png`});
+      await click(720,765);
       await page.waitForTimeout(700);
       await page.screenshot({path:`docs/web-${mobile?'mobile':'desktop'}-world.png`});
       if (mobile) await click(720,825); else await page.keyboard.press('e');
@@ -44,10 +47,8 @@ const {chromium, devices} = require(process.env.PLAYWRIGHT_MODULE || 'playwright
         await page.keyboard.press('e');
         await page.waitForTimeout(300);
         await page.screenshot({path:'docs/web-desktop-power.png'});
-        for (const [sy,ty] of [[394,484],[484,574],[574,394]]) {
-          await click(421,sy); await click(1011,ty);
-        }
-        await page.screenshot({path:'docs/web-desktop-power-complete.png'});
+        // New missions start with power online; this panel is read-only until 30%.
+        await page.screenshot({path:'docs/web-desktop-power-online.png'});
         await page.keyboard.press('Escape');
       } else {
         // Exercise a real held touch on the virtual joystick, then release.

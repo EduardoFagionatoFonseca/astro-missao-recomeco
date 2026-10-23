@@ -7,7 +7,7 @@
 3. 11–16,5 s: rádio e promessa da tripulação.
 4. 16,5–22 s: abrigo isolado e objetivo de sobrevivência.
 
-Legendas em português em `scripts/intro_video.gd` acompanham o tempo do vídeo. Botão, toque, Espaço, Enter ou Esc permitem pular. Recursos começam depois da introdução. Reiniciar a cena conserva a marca de vídeo visto na sessão; em nova abertura, ele reaparece.
+Legendas em português em `scripts/intro_video.gd` acompanham o vídeo. Botão, toque, Espaço, Enter ou Esc permitem pular. Depois do vídeo vem o guia da missão, com recursos e eventos suspensos; a partida só começa ao confirmar o guia. Reiniciar a cena conserva a marca de vídeo visto na sessão; em nova abertura, ele reaparece.
 
 Para regenerar, instale Pillow e numpy no Python e use FFmpeg com libtheora/libvorbis:
 

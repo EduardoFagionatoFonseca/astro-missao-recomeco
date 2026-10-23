@@ -1,7 +1,7 @@
 extends RefCounted
 
 func run(game: Node3D) -> void:
-	assert(game.MOVE_SPEED == (3.0 + 4.2) / 2.0)
+	assert(is_equal_approx(game.MOVE_SPEED, 3.6 * 1.05))
 	assert(not InputMap.has_action("run"))
 	game.inside = false
 	assert(game._wave_contact(game.camp_normal, 0, game.SOLAR_DURATION))
@@ -9,6 +9,8 @@ func run(game: Node3D) -> void:
 	assert(not game._wave_contact(game.camp_normal, 0, game.SOLAR_DURATION))
 	game.inside = false
 	var feedback: Control = game.feedback
+	feedback.set_link(true)
+	game.communications_online = true
 	feedback.seen.erase("solar_tutorial")
 	feedback.shelter_tutorial()
 	feedback.notice_time = 2
@@ -60,8 +62,8 @@ func run(game: Node3D) -> void:
 	game.energy_clock = 0
 	game.signal_transmitted = false
 	game.signal_clock = 0
-	game.oxygen = 100
-	game.food = 100
+	game.oxygen = game.MAX_RESERVE
+	game.food = game.MAX_RESERVE
 	game._resource_warnings()
 	for event: AudioStreamPlayer in events.values(): event.stop()
 	print("PASS: interior-only radiation protection, one-time tutorial, recurring power/signal failures and retuning, unique radio messages, fixed speed and distinct alarms")

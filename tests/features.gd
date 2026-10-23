@@ -48,6 +48,7 @@ func run(game: Node3D) -> void:
 	assert(puzzle.completed and not game.signal_transmitted)
 	puzzle.open_signal(true, 5, false)
 	assert(puzzle.completed and not game.signal_transmitted)
+	game.found[1] = 6
 	puzzle.open_signal(true, 6, false)
 	puzzle.frequency.value = 64
 	puzzle.alignment.value = 38
@@ -79,6 +80,8 @@ func run(game: Node3D) -> void:
 	game.signal_transmitted = false
 	game.energy_charge = 0
 	load("res://tests/mission_balance.gd").new().run(game)
+	game.found[1] = 0
+	load("res://tests/axios_ui.gd").new().run(game)
 	game._update_controls()
 	assert(ResourceLoader.exists("res://assets/cinematics/intro.ogv"))
 	print("PASS: multi-touch, input cancellation, interior bounds/furniture, station proximity, cables, signal locks/stability/pause, power depletion, return position and video asset")

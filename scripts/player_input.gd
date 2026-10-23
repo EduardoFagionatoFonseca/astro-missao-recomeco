@@ -99,7 +99,7 @@ func _update_stick(at: Vector2) -> void:
 
 func _draw() -> void:
 	if not mobile or not enabled: return
-	draw_circle(stick_center, stick_radius, Color("15283a99"))
+	draw_circle(stick_center, stick_radius, Color("191c2199"))
 	draw_arc(stick_center, stick_radius, 0, TAU, 64, Color("b7d8bf99"), 3, true)
 	draw_circle(stick_center + Vector2(movement.x, -movement.y) * stick_radius * 0.65, 39, Color("b7d8bfcc"))
 	_draw_button(action_rect, action_text, Color("f2ba90ef") if action_available else Color("a3b7c477"))
@@ -107,10 +107,10 @@ func _draw() -> void:
 
 func _draw_button(rect: Rect2, text: String, color: Color) -> void:
 	var style := StyleBoxFlat.new()
-	style.bg_color = Color("15283ad9")
+	style.bg_color = Color("191c21ef")
 	style.border_color = color
 	style.set_border_width_all(2)
-	style.set_corner_radius_all(22)
+	style.set_corner_radius_all(4)
 	draw_style_box(style, rect)
 	var font := ThemeDB.fallback_font
 	var width := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, 28).x

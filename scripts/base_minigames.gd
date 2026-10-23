@@ -28,9 +28,9 @@ var scope_time := 0.0
 class SignalScope extends Control:
 	var game: Control
 	func _draw() -> void:
-		draw_rect(Rect2(Vector2.ZERO, size), Color("0c1f2c"))
+		draw_rect(Rect2(Vector2.ZERO, size), Color("0c1014"))
 		for i in range(1, 8):
-			draw_line(Vector2(i * size.x / 8, 0), Vector2(i * size.x / 8, size.y), Color("233f4a"), 1)
+			draw_line(Vector2(i * size.x / 8, 0), Vector2(i * size.x / 8, size.y), Color("2b323b"), 1)
 		var reference := PackedVector2Array()
 		var received := PackedVector2Array()
 		var frequency_error: float = (game.frequency.value - game.target_frequency) / 40.0
@@ -40,7 +40,7 @@ class SignalScope extends Control:
 			var phase: float = x * TAU * 3 - game.scope_time * 2
 			reference.append(Vector2(x * size.x, size.y / 2 + sin(phase) * 23))
 			received.append(Vector2(x * size.x, size.y / 2 + sin(phase + x * frequency_error * TAU + phase_error) * 23))
-		draw_polyline(reference, Color("425b68"), 3, true)
+		draw_polyline(reference, Color("56616b"), 3, true)
 		draw_polyline(received, Color("b7d8bf"), 3, true)
 
 class CableDiagram extends Control:
@@ -61,9 +61,10 @@ class CableDiagram extends Control:
 			for point in [a, b]: draw_circle(point, 8, game.COLORS[i])
 
 func _ready() -> void:
+	theme = preload("res://scripts/ui_theme.gd").create()
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var dim := ColorRect.new()
-	dim.color = Color("07131de8")
+	dim.color = Color("050608e8")
 	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(dim)
 	var center := CenterContainer.new()
@@ -72,10 +73,10 @@ func _ready() -> void:
 	panel = PanelContainer.new()
 	panel.custom_minimum_size = Vector2(900, 650)
 	var style := StyleBoxFlat.new()
-	style.bg_color = Color("152b3b")
-	style.border_color = Color("607b85")
+	style.bg_color = Color("191c21")
+	style.border_color = Color("444b54")
 	style.set_border_width_all(2)
-	style.set_corner_radius_all(26)
+	style.set_corner_radius_all(4)
 	style.content_margin_left = 36
 	style.content_margin_right = 36
 	style.content_margin_top = 26
@@ -90,7 +91,7 @@ func _ready() -> void:
 func _text(text: String, size := 26, color := Color("f0e9d9")) -> Label:
 	var label := Label.new()
 	label.text = text
-	label.add_theme_font_size_override("font_size", size)
+	label.add_theme_font_size_override("font_size", roundi(size * 1.12))
 	label.add_theme_color_override("font_color", color)
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	label.custom_minimum_size.x = 820
@@ -101,7 +102,7 @@ func _button(text: String, callback: Callable) -> Button:
 	var button := Button.new()
 	button.text = text
 	button.custom_minimum_size = Vector2(230, 72)
-	button.add_theme_font_size_override("font_size", 26)
+	button.add_theme_font_size_override("font_size", 30)
 	button.pressed.connect(callback)
 	return button
 
@@ -120,9 +121,9 @@ func open_power(already_ready: bool) -> void:
 	_clear()
 	mode = "energy"
 	if not already_ready and connected.count(true) == 3: connected = [false, false, false]
-	_text("01 / DISTRIBUIÇÃO DE ENERGIA", 32, Color("f2ba90"))
-	_text("Selecione uma origem e depois o destino com a mesma letra.\nConecte os três circuitos para restaurar a bateria.")
-	message = _text("Energia estável. Circuitos verificados." if already_ready else "A reserva mantém o oxigênio enquanto você faz o reparo.", 23, Color("b7d8bf"))
+	_text("ENERGIA", 32, Color("f2ba90"))
+	_text("Conecte as letras iguais.")
+	message = _text("O₂ online." if already_ready else "O₂ offline. Reconecte os cabos.", 23, Color("b7d8bf"))
 	diagram = CableDiagram.new()
 	diagram.game = self
 	diagram.custom_minimum_size = Vector2(820, 270)
@@ -141,22 +142,22 @@ func open_power(already_ready: bool) -> void:
 		targets.append(target)
 		if already_ready: connected[i] = true
 		if already_ready: source.disabled = true
-	body.add_child(_button("Voltar à base", close))
+	body.add_child(_button("VOLTAR", close))
 	_refresh_connections()
 
 func _select_source(index: int) -> void:
 	if completed or frozen or connected[index]: return
 	selected = index
-	message.text = "Origem %s selecionada. Escolha o destino." % SYMBOLS[index].left(1)
+	message.text = "Conecte o destino %s." % SYMBOLS[index].left(1)
 	_refresh_connections()
 
 func _select_target(index: int) -> void:
 	if completed or frozen: return
 	if selected < 0:
-		message.text = "Selecione primeiro uma origem à esquerda."
+		message.text = "Escolha uma origem."
 		return
 	if selected != index:
-		message.text = "Circuitos diferentes. Confira a letra de cada conector."
+		message.text = "Conexão incorreta."
 		selected = -1
 		_refresh_connections()
 		return
@@ -166,7 +167,7 @@ func _select_target(index: int) -> void:
 	_refresh_connections()
 	if connected.count(true) == 3:
 		completed = true
-		message.text = "Energia restaurada. O terminal de comunicação está disponível."
+		message.text = "ENERGIA RESTAURADA"
 		power_repaired.emit()
 
 func _refresh_connections() -> void:
@@ -178,29 +179,28 @@ func _refresh_connections() -> void:
 func open_signal(power: bool, parts: int, sent: bool, revision := 0) -> void:
 	_clear()
 	mode = "signal"
-	_text("02 / SINALIZADOR DE RESGATE", 32, Color("92bde0"))
+	_text("ANTENA", 32, Color("92bde0"))
 	if not power or parts < 6 or sent:
-		_text("Sua localização já foi transmitida. Reúna os materiais restantes para o pouso." if sent else "Repare a energia no painel ao lado." if not power else "Antena incompleta: %d/6 peças. Explore Marte e volte com as seis peças." % parts)
-		_text("A tripulação precisa de uma transmissão estável para encontrar o abrigo.", 25, Color("b7d8bf"))
-		body.add_child(_button("Voltar à base", close))
+		_text("Sinal ativo." if sent else "Repare a energia." if not power else "Antena: %d/6 peças." % parts)
+		body.add_child(_button("VOLTAR", close))
 		completed = true
 		return
 	target_frequency = 24.0 + posmod(40 + revision * 17, 53)
 	target_alignment = 22.0 + posmod(16 + revision * 23, 57)
-	_text("Sobreponha as ondas ajustando frequência e alinhamento.\nMantenha o sinal acima de 92% por 3 segundos.", 24)
-	message = _text("Procurando a frequência da tripulação…", 25, Color("b7d8bf"))
+	_text("Alinhe as ondas. Sustente por 3 s.", 24)
+	message = _text("Buscando sinal…", 25, Color("b7d8bf"))
 	scope = SignalScope.new()
 	scope.game = self
 	scope.custom_minimum_size = Vector2(820, 74)
 	body.add_child(scope)
 	_text("FREQUÊNCIA", 21)
 	frequency = _slider(20)
-	_text("ALINHAMENTO DA ANTENA", 21)
+	_text("ALINHAMENTO", 21)
 	alignment = _slider(80)
 	stability = ProgressBar.new()
 	stability.custom_minimum_size.y = 38
 	body.add_child(stability)
-	body.add_child(_button("Voltar à base", close))
+	body.add_child(_button("VOLTAR", close))
 
 func _slider(value: float) -> HSlider:
 	var slider := HSlider.new()
@@ -232,7 +232,7 @@ func _process(delta: float) -> void:
 	message.text = "Sinal %d%%  /  %s" % [quality, "Transmitindo… %.1f / 3 s" % hold_time if quality >= 92 else "Ajuste até estabilizar"]
 	if hold_time >= 3.0:
 		completed = true
-		message.text = "Localização confirmada. Sua tripulação está a caminho!"
+		message.text = "SINAL RESTAURADO"
 		signal_sent.emit()
 
 func close() -> void:

@@ -4,6 +4,9 @@ const STATIONS := {"energy": Vector3(-3.6, 0, -1.6), "signal": Vector3(3.6, 0, -
 const BLOCKERS := [Rect2(-4.6, -2.6, 1.8, 2.0), Rect2(2.8, -2.6, 1.8, 2.0), Rect2(-4.6, 1.0, 1.6, 1.8)]
 var lights: Array[MeshInstance3D] = []
 var status: Label3D
+var window_glass: MeshInstance3D
+var window_light: OmniLight3D
+var weather: Label3D
 
 func _ready() -> void:
 	position = Vector3(0, -100, 0)
@@ -17,7 +20,14 @@ func _ready() -> void:
 	for x in [-5, 5]:
 		_box(Vector3(0.24, 1.1, 8), Vector3(x, 0.5, 0), Color("b8c6bd"))
 	_box(Vector3(3.8, 1.8, 0.08), Vector3(0, 1.6, -3.83), Color("243c55"))
-	_box(Vector3(3.45, 1.45, 0.08), Vector3(0, 1.6, -3.75), Color("c18b70"))
+	window_glass = _box(Vector3(3.45, 1.45, 0.08), Vector3(0, 1.6, -3.75), Color("875d4e"))
+	window_light = OmniLight3D.new()
+	window_light.position = Vector3(0, 2, -2.8)
+	window_light.omni_range = 8
+	window_light.light_color = Color("ffcb7f")
+	window_light.light_energy = 0
+	add_child(window_light)
+	weather = _label("SEGURO", Vector3(0, 0.6, -3.4), 28)
 	_box(Vector3(0.06, 1.5, 0.08), Vector3(0, 1.6, -3.65), Color("e5decb"))
 	# A low far-side silhouette visible through the window.
 	_box(Vector3(3.4, 0.35, 0.05), Vector3(0, 1.0, -3.65), Color("9c6356"))
@@ -31,7 +41,7 @@ func _ready() -> void:
 			lights.append(lamp)
 	_label("ENERGIA", Vector3(-3.6, 1.8, -2.4), 34)
 	_label("COMUNICAÇÃO", Vector3(3.5, 1.8, -2.4), 30)
-	status = _label("RESERVA DE EMERGÊNCIA", Vector3(0, 2.8, -3.5), 26)
+	status = _label("O₂ ONLINE", Vector3(0, 2.8, -3.5), 30)
 	_box(Vector3(1.2, 0.4, 2.2), Vector3(-3.9, 0.2, 2), Color("3d5964"))
 	_box(Vector3(1.1, 0.2, 1.7), Vector3(-3.9, 0.5, 2.15), Color("b7d8bf"))
 	_box(Vector3(0.8, 0.23, 0.35), Vector3(-3.9, 0.6, 1.45), Color("e7dfc9"))
@@ -63,9 +73,11 @@ func _label(text: String, at: Vector3, size: int) -> Label3D:
 	label.text = text
 	label.font_size = size
 	label.pixel_size = 0.009
+	label.outline_size = 1
+	label.outline_modulate = Color("e9e5d9")
 	label.position = at
 	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	label.modulate = Color("f0e9d9")
+	label.modulate = Color("283238")
 	add_child(label)
 	return label
 
@@ -92,6 +104,17 @@ func station_at(at: Vector3) -> String:
 	return ""
 
 func set_power(ready: bool, charge: float) -> void:
-	status.text = "ENERGIA %d%%  /  O₂ ATIVO" % charge if ready else "RESERVA DE EMERGÊNCIA  /  REPARE A ENERGIA"
+	status.text = "O₂ ONLINE / %d%%" % charge if ready else "O₂ OFFLINE"
 	for light in lights:
 		light.material_override.albedo_color = Color("b7d8bf") if ready else Color("f2ba90")
+
+func set_solar(phase: String) -> void:
+	var unsafe := phase != "calm"
+	var material: StandardMaterial3D = window_glass.material_override
+	material.albedo_color = Color("ffe2a8") if unsafe else Color("875d4e")
+	material.emission_enabled = unsafe
+	material.emission = Color("ffce7b")
+	material.emission_energy_multiplier = 1.5 if unsafe else 0
+	window_light.light_energy = 1.3 if unsafe else 0
+	weather.text = "RADIAÇÃO" if unsafe else "SEGURO"
+	weather.modulate = Color("8c441e") if unsafe else Color("304c39")

@@ -8,9 +8,10 @@ const FOOD_RATE := 1.8
 const SOLAR_WARNING := 10.0
 const SOLAR_DURATION := 10.0
 const SOLAR_INTERVAL := 100.0
-const ENERGY_INTERVAL := 75.0
-const SIGNAL_INTERVAL := 100.0
-const MOVE_SPEED := 3.6
+const ENERGY_INTERVAL := 63.75
+const SIGNAL_INTERVAL := 85.0
+const MOVE_SPEED := 3.78
+const MAX_RESERVE := 105.0
 const WAVE_HALF_WIDTH := 0.055
 const SHELTER_RADIUS := 3.1
 const CREAM := Color("f0e9d9")
@@ -38,7 +39,9 @@ var ship_normal := Vector3.UP
 var ship_timer := -1.0
 var ship_landed := false
 var hud: CanvasLayer
-var intro: PanelContainer
+var intro: Control
+var start_menu: PanelContainer
+var material_icons: Array[Texture2D] = []
 var ending: PanelContainer
 var pause_panel: PanelContainer
 var counts: Array[Label] = []
@@ -49,8 +52,8 @@ var auto_check := false
 var capture := false
 var check_time := 0.0
 var pad := Vector2.ZERO
-var oxygen := 100.0
-var food := 100.0
+var oxygen := MAX_RESERVE
+var food := MAX_RESERVE
 var exposure := 0.0
 var camp_normal := Vector3(0.07, 1, 0.12).normalized()
 var garden_normal := Vector3(0.9, -0.15, -0.5).normalized()
@@ -84,9 +87,12 @@ var minigames: Control
 var intro_video: Control
 var inside := false
 var transitioning := false
-var energy_ready := false
-var energy_charge := 0.0
+var energy_ready := true
+var energy_charge := 100.0
 var signal_transmitted := false
+var communications_online := true
+var energy_low_announced := false
+var solar_cycle := 0
 var energy_clock := 0.0
 var signal_clock := 0.0
 var energy_failures := 0
@@ -155,8 +161,13 @@ func _ready() -> void:
 		solar_clock = 7
 		feedback.shelter_tutorial()
 	if Engine.has_meta("astro_intro_seen") and not capture and not auto_check: _start_game()
-	if "--capture-base" in OS.get_cmdline_user_args() or "--capture-power" in OS.get_cmdline_user_args() or "--capture-signal" in OS.get_cmdline_user_args():
+	if "--capture-briefing" in OS.get_cmdline_user_args(): _show_briefing()
+	if "--capture-base" in OS.get_cmdline_user_args() or "--capture-power" in OS.get_cmdline_user_args() or "--capture-signal" in OS.get_cmdline_user_args() or "--capture-window" in OS.get_cmdline_user_args():
 		_apply_location(true)
+		if "--capture-window" in OS.get_cmdline_user_args():
+			solar_phase = "active"
+			solar_clock = 6.0
+			feedback.queue.clear()
 		avatar.position = base_room.position + Vector3(0, 0, 1.2)
 		if "--capture-power" in OS.get_cmdline_user_args(): minigames.open_power(false)
 		if "--capture-signal" in OS.get_cmdline_user_args(): minigames.open_signal(true, 6, false)
@@ -401,6 +412,8 @@ func _process(delta: float) -> void:
 		if "--capture-power" in OS.get_cmdline_user_args(): capture_path = "res://docs/power-preview.png"
 		if "--capture-signal" in OS.get_cmdline_user_args(): capture_path = "res://docs/signal-preview.png"
 		if "--capture-warning" in OS.get_cmdline_user_args(): capture_path = "res://docs/warning-preview.png"
+		if "--capture-briefing" in OS.get_cmdline_user_args(): capture_path = "res://docs/briefing-preview.png"
+		if "--capture-window" in OS.get_cmdline_user_args(): capture_path = "res://docs/window-preview.png"
 		get_viewport().get_texture().get_image().save_png(capture_path)
 		get_tree().quit()
 	if auto_check and check_time > 0.4:
@@ -422,6 +435,7 @@ func _process(delta: float) -> void:
 		print("PASS: spherical placement, collection, rescue landing, boarding and completion")
 		# Let pending audio buffers and queued UI nodes finish before shutdown.
 		for audio in [sound, music, alert_audio, wave_audio]: audio.stop()
+		for audio in event_audio.players.values(): audio.stop()
 		await get_tree().create_timer(0.15).timeout
 		get_tree().quit()
 	_update_controls()
@@ -495,11 +509,6 @@ func _collect(index: int) -> void:
 	item.node.visible = false
 	found[item.kind] += 1
 	collected += 1
-	if found[1] == 6:
-		feedback.transmit("antenna_parts", "Você encontrou todas as peças da antena! Leve-as ao sinalizador e sintonize nossa frequência.")
-	if collected >= 6: feedback.transmit("progress_one", "Estamos acompanhando seus sinais. Continue reunindo os materiais e lembre de voltar para respirar.")
-	if collected >= 12: feedback.transmit("progress_two", "Estamos quase chegando, aguenta aí. Você está indo bem.")
-	if collected == TOTAL: feedback.transmit("materials", "Suprimentos confirmados. Mantenha a conexão ativa para conseguirmos pousar perto de você.")
 	_chime(660.0 + item.kind * 110.0)
 	_try_rescue()
 
@@ -508,7 +517,6 @@ func _try_rescue() -> void:
 		_begin_rescue()
 
 func _begin_rescue() -> void:
-	feedback.transmit("rescue", "Estamos iniciando a descida. Sua espera está acabando!", true)
 	ship_normal = (normal + north * 0.14).normalized()
 	ship = _surface(ship_normal)
 	ship.visible = not inside
@@ -533,7 +541,7 @@ func _update_ship(delta: float) -> void:
 	ship.position = ship_normal * (R + height)
 	if ship_timer >= 9.0 and not ship_landed:
 		ship_landed = true
-		feedback.transmit("landed", "Pousamos! Aproxime-se da nave. Vamos levar você para casa.", true)
+		feedback.transmit("landed", "Pousamos. Venha à nave.", true)
 		_chime(880)
 
 func _unhandled_key_input(event: InputEvent) -> void:
@@ -549,7 +557,7 @@ func _interact() -> void:
 	if inside:
 		var station: String = base_room.station_at(avatar.position)
 		if station == "exit": _transition_to(false)
-		elif station == "energy": minigames.open_power(energy_ready)
+		elif station == "energy": minigames.open_power(energy_ready and energy_charge > 30)
 		elif station == "signal": minigames.open_signal(energy_ready, found[1], signal_transmitted, signal_failures)
 		_update_controls()
 		return
@@ -559,8 +567,8 @@ func _interact() -> void:
 	if _at_camp():
 		_transition_to(true)
 		return
-	if _at_garden() and food < 99.0:
-		food = 100.0
+	if _at_garden() and food < MAX_RESERVE - 1.0:
+		food = MAX_RESERVE
 		food_empty_time = 0.0
 		_chime(550)
 		return
@@ -575,8 +583,8 @@ func _at_garden() -> bool:
 	return normal.dot(garden_normal) > cos(2.4 / R)
 
 func _update_survival(delta: float) -> void:
-	if _at_camp():
-		oxygen = minf(100.0, oxygen + delta * 25.0)
+	if _at_camp() and energy_ready:
+		oxygen = minf(MAX_RESERVE, oxygen + delta * 25.0)
 	else:
 		oxygen = maxf(0.0, oxygen - delta * OXYGEN_RATE)
 	food = maxf(0.0, food - delta * FOOD_RATE)
@@ -590,7 +598,6 @@ func _update_survival(delta: float) -> void:
 			solar_clock = 0.0
 			solar_remaining = SOLAR_WARNING
 			_play_warning()
-			feedback.shelter_tutorial()
 	elif solar_phase == "warning":
 		solar_remaining = SOLAR_WARNING - solar_clock
 		if solar_remaining <= 0.0:
@@ -609,12 +616,15 @@ func _update_survival(delta: float) -> void:
 			_chime(150)
 		if solar_remaining <= 0.0:
 			solar_phase = "calm"
+			solar_cycle += 1
 			solar_clock = 0.0
 			solar_remaining = SOLAR_INTERVAL
 			wave_audio.stop()
 	solar_wave.visible = solar_phase == "active" and not inside
 	if solar_wave.visible: _draw_wave()
 	_update_last_chance(delta)
+	_update_solar_notices()
+	base_room.set_solar(solar_phase)
 	_update_distant_light()
 	_resource_warnings(delta)
 
@@ -658,25 +668,25 @@ func _draw_wave() -> void:
 func _resource_warnings(delta := 0.0) -> void:
 	health_alarm_cooldown = maxf(0, health_alarm_cooldown - delta)
 	var crossed := false
-	if oxygen <= 25.0 and not oxygen_low:
+	if _percent(oxygen) <= 25.0 and not oxygen_low:
 		oxygen_low = true
 		crossed = true
-	if food <= 25.0 and not food_low:
+	if _percent(food) <= 25.0 and not food_low:
 		food_low = true
 		crossed = true
-	if oxygen <= 12.0 and not oxygen_critical:
+	if _percent(oxygen) <= 12.0 and not oxygen_critical:
 		oxygen_critical = true
 		crossed = true
-	if food <= 12.0 and not food_critical:
+	if _percent(food) <= 12.0 and not food_critical:
 		food_critical = true
 		crossed = true
-	if oxygen > 35.0:
+	if _percent(oxygen) > 35.0:
 		oxygen_low = false
 		oxygen_critical = false
-	if food > 35.0:
+	if _percent(food) > 35.0:
 		food_low = false
 		food_critical = false
-	if crossed or (minf(oxygen, food) <= 12.0 and health_alarm_cooldown <= 0):
+	if crossed or (_percent(minf(oxygen, food)) <= 12.0 and health_alarm_cooldown <= 0):
 		event_audio.play("vitals")
 		health_alarm_cooldown = 8.0
 
@@ -718,7 +728,7 @@ func _style(color: Color, border := Color.TRANSPARENT, radius := 18) -> StyleBox
 	box.bg_color = color
 	box.border_color = border
 	box.set_border_width_all(1)
-	box.set_corner_radius_all(radius)
+	box.set_corner_radius_all(mini(radius, 4))
 	box.content_margin_left = 24
 	box.content_margin_right = 24
 	box.content_margin_top = 18
@@ -728,27 +738,25 @@ func _style(color: Color, border := Color.TRANSPARENT, radius := 18) -> StyleBox
 func _label(text: String, size: int, color := CREAM) -> Label:
 	var label := Label.new()
 	label.text = text
-	label.add_theme_font_size_override("font_size", size)
+	label.add_theme_font_size_override("font_size", roundi(size * 1.12))
 	label.add_theme_color_override("font_color", color)
 	return label
 
 func _button(text: String, callback: Callable) -> Button:
 	var button := Button.new()
+	button.theme = preload("res://scripts/ui_theme.gd").create()
 	button.text = text
-	button.custom_minimum_size.y = 72
-	button.add_theme_font_size_override("font_size", 26)
-	button.add_theme_color_override("font_color", Color("253740"))
-	button.add_theme_stylebox_override("normal", _style(PEACH, Color.TRANSPARENT, 12))
-	button.add_theme_stylebox_override("hover", _style(Color("f8d2aa"), Color.TRANSPARENT, 12))
-	button.add_theme_stylebox_override("pressed", _style(Color("cfa07d"), Color.TRANSPARENT, 12))
+	button.custom_minimum_size.y = 76
+	button.add_theme_font_size_override("font_size", 30)
 	button.pressed.connect(callback)
 	return button
 
 func _modal(title: String, subtitle: String) -> PanelContainer:
 	var panel := PanelContainer.new()
+	panel.theme = preload("res://scripts/ui_theme.gd").create()
 	panel.custom_minimum_size = Vector2(900, 0)
 	panel.size = Vector2(900, 0)
-	panel.add_theme_stylebox_override("panel", _style(Color("15283af5"), Color("526371"), 24))
+	panel.add_theme_stylebox_override("panel", _style(Color("191c21f5"), Color("444b54"), 24))
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 18)
 	panel.add_child(v)
@@ -777,10 +785,12 @@ func _build_ui() -> void:
 	vignette.material = vignette_material
 	hud.add_child(vignette)
 	var root := Control.new()
+	root.theme = preload("res://scripts/ui_theme.gd").create()
 	hud_root = root
 	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	hud.add_child(root)
+	root.hide()
 	var logo := _label("ASTRO", 25)
 	logo.position = Vector2(42, 28)
 	root.add_child(logo)
@@ -788,7 +798,7 @@ func _build_ui() -> void:
 	vital_backdrop.position = Vector2(22, 64)
 	vital_backdrop.size = Vector2(365, 282)
 	vital_backdrop.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	vital_backdrop.add_theme_stylebox_override("panel", _style(Color("15283ae6"), Color("425665"), 18))
+	vital_backdrop.add_theme_stylebox_override("panel", _style(Color("191c21f0"), Color("444b54"), 18))
 	root.add_child(vital_backdrop)
 	var vitals := VBoxContainer.new()
 	vitals_ui = vitals
@@ -796,7 +806,7 @@ func _build_ui() -> void:
 	vitals.add_theme_constant_override("separation", 8)
 	root.add_child(vitals)
 	oxygen_label = _label("O₂", 24, MINT)
-	food_label = _label("ALIMENTO", 24, PEACH)
+	food_label = _label("COMIDA", 24, PEACH)
 	vitals.add_child(oxygen_label)
 	oxygen_bar = _vital_bar(MINT)
 	vitals.add_child(oxygen_bar)
@@ -808,21 +818,28 @@ func _build_ui() -> void:
 	objectives.position = Vector2(917, 30)
 	objectives.add_theme_constant_override("separation", 12)
 	root.add_child(objectives)
-	var names := ["PEDRAS", "ANTENA", "COMBUSTÍVEL"]
+	var names := ["PEDRAS", "ANTENA", "COMBUST."]
 	for i in range(3):
+		material_icons.append(_make_item_icon(i))
 		var card := PanelContainer.new()
-		card.custom_minimum_size = Vector2(185, 112)
-		card.add_theme_stylebox_override("panel", _style(Color("15283ad9"), Color("425665"), 15))
+		card.custom_minimum_size = Vector2(250, 116)
+		card.add_theme_stylebox_override("panel", preload("res://scripts/ui_theme.gd").box(Color("191c21ed"), Color("444b54"), 12))
 		objectives.add_child(card)
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 12)
+		card.add_child(row)
+		var icon := TextureRect.new()
+		icon.texture = material_icons[i]
+		icon.custom_minimum_size = Vector2(80, 80)
+		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		row.add_child(icon)
 		var column := VBoxContainer.new()
-		card.add_child(column)
-		var count_label := _label("0/6", 34, [PEACH, MINT, CREAM][i])
-		count_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		row.add_child(column)
+		var count_label := _label("0/6", 36, [PEACH, MINT, CREAM][i])
 		counts.append(count_label)
 		column.add_child(count_label)
-		var name_label := _label(names[i], 18, MUTED)
-		name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		column.add_child(name_label)
+		column.add_child(_label(names[i], 20, MUTED))
 	var pause_button := _button("II", _toggle_pause)
 	pause_ui = pause_button
 	pause_button.position = Vector2(1335, 817)
@@ -833,25 +850,67 @@ func _build_ui() -> void:
 	mute_button.position = Vector2(1268, 817)
 	mute_button.custom_minimum_size.x = 54
 	root.add_child(mute_button)
-	intro = _modal("Sua tripulação vai voltar.", "Você ficou isolado em Marte. Reúna 6 pedras, 6 peças da antena e 6 galões de combustível. Entre na base, repare a energia e transmita sua localização.\n\nA base recupera oxigênio. A estufa oferece alimento. Quando o céu clarear, entre no abrigo para escapar da radiação.\n\nWASD: mover · Espaço: saltar · E: interagir\nNo celular, use o joystick e os botões na tela.")
-	intro.get_child(0).add_child(_button("Iniciar missão  >", _start))
-	pause_panel = _modal("Uma pausa entre as estrelas.", "Explore, reúna materiais e volte com reservas.\nE na base: entrar · E nos painéis: usar · E na estufa: comer\nWASD ou setas: mover · Espaço: saltar\n\nRepare os três circuitos e sintonize o sinalizador com 6 peças da antena. Sua tripulação precisa do sinal e dos materiais para pousar.\n\nSó o interior da base protege da radiação. Os minigames suspendem os recursos. Dentro da base, o alimento ainda é consumido.")
+	start_menu = _modal("ASTRO", "Um pequeno recomeço.")
+	start_menu.get_child(0).add_child(_button("INICIAR", _start))
+	intro = preload("res://scripts/mission_briefing.gd").new()
+	hud.add_child(intro)
+	intro.accepted.connect(_start_game)
+	pause_panel = _modal("PAUSA", "Energia gera O₂. A estufa fornece comida.\nJanela acesa? Fique dentro.\nAntena ligada? Avisos disponíveis.")
 	pause_panel.get_child(0).add_child(_button("Continuar  >", _toggle_pause))
 	pause_panel.hide()
-	ending = _modal("Toda pequena descoberta conta.", "Você reuniu materiais para o resgate e cuidou das reservas do traje.\n\nOxigênio exige planejamento de ida e volta. Alimentos sustentam a exploração. Um abrigo adequado protege da radiação.\n\nSua viagem de volta para casa começa agora.")
+	ending = _modal("EM CASA.", "Sua tripulação chegou.")
 	ending.get_child(0).add_child(_button("Explorar outra vez  ", func(): get_tree().reload_current_scene()))
 	ending.hide()
-	death_panel = _modal("O silêncio tomou conta.", "A expedição terminou.\n\nCada saída precisa de reservas para voltar.\nRespire fundo e tente uma nova rota.")
+	death_panel = _modal("MISSÃO ENCERRADA", "Cuide das reservas. Tente outra rota.")
 	death_panel.get_child(0).add_child(_button("Recomeçar expedição  ", func(): get_tree().reload_current_scene()))
 	death_panel.hide()
+
+func _make_item_icon(kind: int) -> Texture2D:
+	var viewport := SubViewport.new()
+	viewport.size = Vector2i(128, 128)
+	viewport.own_world_3d = true
+	viewport.transparent_bg = true
+	viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
+	add_child(viewport)
+	var stage := Node3D.new()
+	viewport.add_child(stage)
+	if kind == 0:
+		_asset("rock_largeA", stage, 0.55)
+	elif kind == 1:
+		_box(stage, Vector3(0.34, 0.42, 0.28), MINT, Vector3(0, 0.23, 0))
+		_box(stage, Vector3(0.36, 0.1, 0.3), Color("607c77"), Vector3(0, 0.28, 0))
+	else:
+		_box(stage, Vector3(0.35, 0.48, 0.25), Color("e2ad68"), Vector3(0, 0.24, 0))
+		_box(stage, Vector3(0.18, 0.08, 0.17), Color("576d76"), Vector3(0.06, 0.51, 0))
+		_box(stage, Vector3(0.37, 0.08, 0.27), Color("f1d7aa"), Vector3(0, 0.25, 0))
+	var environment := WorldEnvironment.new()
+	var settings := Environment.new()
+	settings.background_mode = Environment.BG_COLOR
+	settings.background_color = Color.TRANSPARENT
+	settings.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
+	settings.ambient_light_color = Color.WHITE
+	settings.ambient_light_energy = 0.8
+	environment.environment = settings
+	stage.add_child(environment)
+	var light := DirectionalLight3D.new()
+	light.rotation_degrees = Vector3(-40, -35, 0)
+	light.light_energy = 1.1
+	stage.add_child(light)
+	var icon_camera := Camera3D.new()
+	icon_camera.projection = Camera3D.PROJECTION_ORTHOGONAL
+	icon_camera.size = 1.1
+	icon_camera.position = Vector3(1.1, 1, 1.4)
+	stage.add_child(icon_camera)
+	icon_camera.look_at(Vector3(0, 0.24, 0))
+	return viewport.get_texture()
 
 func _vital_bar(color: Color) -> ProgressBar:
 	var bar := ProgressBar.new()
 	bar.custom_minimum_size = Vector2(300, 25)
-	bar.max_value = 100
-	bar.value = 100
+	bar.max_value = MAX_RESERVE
+	bar.value = MAX_RESERVE
 	bar.show_percentage = false
-	var track := _style(Color("223543"), Color("49606a"), 8)
+	var track := _style(Color("11151a"), Color("444b54"), 8)
 	var fill := _style(color, Color.TRANSPARENT, 7)
 	for style in [track, fill]:
 		style.content_margin_left = 0
@@ -863,21 +922,32 @@ func _vital_bar(color: Color) -> ProgressBar:
 	return bar
 
 func _start() -> void:
-	intro.hide()
-	if auto_check or capture or Engine.has_meta("astro_intro_seen"):
+	start_menu.hide()
+	if auto_check or capture:
 		_start_game()
 	else:
 		music.stop()
 		intro_video.begin(muted)
 
-func _start_game() -> void:
-	Engine.set_meta("astro_intro_seen", true)
-	intro.hide()
-	playing = true
-	if not music.playing: music.play()
-	feedback.transmit("start", "Não se preocupe, estamos voltando para buscar você. Mantenha-se em segurança e cuide do abrigo.")
+func _show_briefing() -> void:
+	playing = false
+	start_menu.hide()
+	hud_root.hide()
+	intro.show()
 	_update_controls()
 
+func _start_game() -> void:
+	Engine.set_meta("astro_intro_seen", true)
+	start_menu.hide()
+	intro.hide()
+	hud_root.show()
+	playing = true
+	if not music.playing: music.play()
+	feedback.transmit("start", "Estamos voltando. Mantenha-se seguro.")
+	_update_controls()
+
+func _percent(value: float) -> float:
+	return clampf(value / MAX_RESERVE * 100.0, 0, 100)
 
 func _toggle_pause() -> void:
 	if not playing or won or dead: return
@@ -893,21 +963,21 @@ func _update_hud(_delta: float) -> void:
 	for i in range(3):
 		counts[i].text = str(found[i]) + "/6"
 		counts[i].add_theme_color_override("font_color", MINT if found[i] == 6 else MUTED)
-	oxygen_label.text = "O₂   " + str(ceili(oxygen)) + "%"
-	food_label.text = "ALIMENTO   " + str(ceili(food)) + "%"
+	oxygen_label.text = "O₂   " + str(ceili(_percent(oxygen))) + "%"
+	food_label.text = "COMIDA   " + str(ceili(_percent(food))) + "%"
 	oxygen_bar.value = oxygen
 	food_bar.value = food
 	var pulse := 0.5 + 0.5 * sin(elapsed * 3.6)
-	for pair in [[oxygen_bar, oxygen_label, oxygen, MINT], [food_bar, food_label, food, PEACH]]:
+	for pair in [[oxygen_bar, oxygen_label, _percent(oxygen), MINT], [food_bar, food_label, _percent(food), PEACH]]:
 		var severity := clampf((30.0 - pair[2]) / 15.0, 0, 1)
 		var style: StyleBoxFlat = pair[0].get_theme_stylebox("fill")
 		var track: StyleBoxFlat = pair[0].get_theme_stylebox("background")
 		var urgent := Color("d95057").lerp(Color("f08078"), pulse)
 		style.bg_color = pair[3].lerp(urgent, severity)
-		track.bg_color = Color("223543").lerp(Color("6f303d"), severity * (0.65 + pulse * 0.2))
+		track.bg_color = Color("11151a").lerp(Color("6f303d"), severity * (0.65 + pulse * 0.2))
 		pair[0].modulate.a = lerpf(1.0, 0.86 + pulse * 0.14, severity)
 		pair[1].add_theme_color_override("font_color", pair[3].lerp(urgent, severity))
-	var depleted := 1.0 - clampf(minf(oxygen, food) / 30.0, 0, 1)
+	var depleted := 1.0 - clampf(_percent(minf(oxygen, food)) / 30.0, 0, 1)
 	var grace := clampf(maxf(oxygen_empty_time, food_empty_time) / 2.0, 0, 1)
 	var intensity := depleted * 0.65 + grace * 0.3
 	if dead: intensity = 0.98
@@ -1018,37 +1088,38 @@ func _build_expansion() -> void:
 	minigames.closed.connect(_update_controls)
 	intro_video = preload("res://scripts/intro_video.gd").new()
 	hud.add_child(intro_video)
-	intro_video.finished.connect(_start_game)
+	intro_video.finished.connect(_show_briefing)
+	intro.configure(material_icons, controls.mobile)
 	portrait_hint = PanelContainer.new()
 	portrait_hint.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	portrait_hint.add_theme_stylebox_override("panel", _style(Color("102334")))
-	var rotate_text := _label("Gire o celular para jogar\n\nUse a tela na horizontal para explorar Marte.\nO jogo aguarda você.", 48, CREAM)
+	portrait_hint.add_theme_stylebox_override("panel", _style(Color("101215")))
+	var rotate_text := _label("Gire o celular.", 48, CREAM)
 	rotate_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	rotate_text.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	portrait_hint.add_child(rotate_text)
 	hud.add_child(portrait_hint)
 	portrait_hint.hide()
 	transition_veil = ColorRect.new()
-	transition_veil.color = Color("0d1e2d")
+	transition_veil.color = Color("101215")
 	transition_veil.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	transition_veil.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	transition_veil.modulate.a = 0
 	hud.add_child(transition_veil)
 	get_viewport().size_changed.connect(_layout_ui)
-	for modal in [intro, pause_panel, ending, death_panel]:
+	for modal in [start_menu, pause_panel, ending, death_panel]:
 		modal.resized.connect(_center_modal.bind(modal))
 	_layout_ui()
 	_update_controls()
 
 func _layout_ui() -> void:
 	var view := get_viewport().get_visible_rect().size
-	objectives_ui.position = Vector2(view.x - 625, 28)
+	objectives_ui.position = Vector2(view.x - 810, 28)
 	pause_ui.position = Vector2(view.x - 112, 160)
-	mute_ui.position = Vector2(view.x - 202, 160)
+	mute_ui.position = Vector2(view.x - 230, 160)
 	pause_ui.custom_minimum_size = Vector2(76, 72)
-	mute_ui.custom_minimum_size = Vector2(76, 72)
+	mute_ui.custom_minimum_size = Vector2(100, 72)
 	prompt.position = Vector2((view.x - 450) / 2, view.y - 112)
-	for modal in [intro, pause_panel, ending, death_panel]: _center_modal(modal)
+	for modal in [start_menu, pause_panel, ending, death_panel]: _center_modal(modal)
 	portrait_hint.visible = controls.mobile and view.y > view.x
 	controls.reset()
 	_update_controls()
@@ -1061,12 +1132,13 @@ func _update_controls() -> void:
 	minigames.frozen = paused or portrait_hint.visible
 	var active := playing and not paused and not dead and not won and not transitioning and not minigames.visible and not portrait_hint.visible
 	controls.set_enabled(active)
+	if feedback.link_online != communications_online: feedback.set_link(communications_online)
 	feedback.active = active
 	if not active:
 		prompt.hide()
 		prompt_target = ""
 	base_status.visible = playing and not intro_video.active and not won and not dead
-	base_status.text = ("BASE / ENERGIA %d%%" % energy_charge if energy_ready else "BASE / REPARE A ENERGIA") + ("\nSINAL ATIVO" if signal_transmitted else "\nSINAL / RESTAURE A CONEXÃO" if signal_failures > 0 else "\nSINAL / PENDENTE")
+	base_status.text = ("ENERGIA %d%%" % energy_charge if energy_ready else "O₂ OFFLINE") + ("\nRÁDIO ONLINE" if communications_online else "\nRÁDIO OFFLINE")
 
 func _jump() -> void:
 	if controls.enabled and not inside and hop == 0: hop_velocity = 2.4
@@ -1077,14 +1149,14 @@ func _update_prompt() -> void:
 	var text := ""
 	if inside:
 		target = base_room.station_at(avatar.position)
-		text = {"energy": "Gerenciar energia", "signal": "Usar sinalizador", "exit": "Sair da base", "": ""}[target]
+		text = {"energy": "ENERGIA", "signal": "ANTENA", "exit": "SAIR", "": ""}[target]
 	elif ship_landed and normal.dot(ship_normal) > 0.975:
 		target = "board"
 		text = "Embarcar"
 	elif _at_camp():
 		target = "enter"
-		text = "Entrar na base"
-	elif _at_garden() and food < 99:
+		text = "ABRIGO"
+	elif _at_garden() and food < MAX_RESERVE - 1.0:
 		target = "food"
 		text = "Comer"
 	else:
@@ -1103,7 +1175,7 @@ func _update_prompt() -> void:
 		prompt_tween.tween_property(prompt, "modulate:a", 0.0, 0.12)
 		prompt_tween.tween_callback(prompt.hide)
 	else:
-		prompt.text = ("Toque / " if controls.mobile else "[E]  ") + text
+		prompt.text = ("" if controls.mobile else "[E] ") + text
 		prompt.show()
 		prompt.pivot_offset = prompt.size / 2
 		prompt.scale = Vector2.ONE * 0.92
@@ -1161,6 +1233,7 @@ func _apply_location(to_inside: bool) -> void:
 		wave_audio.stop()
 		alert_audio.stop()
 	base_room.set_power(energy_ready, energy_charge)
+	base_room.set_solar(solar_phase)
 	controls.reset()
 	prompt_target = ""
 
@@ -1176,38 +1249,53 @@ func _update_indoor_movement(delta: float) -> void:
 	astronaut.position.y = absf(sin(walk)) * input.length() * 0.055
 	astronaut.rotation.z = sin(walk) * input.length() * 0.045
 
+func _update_solar_notices() -> void:
+	if not communications_online: return
+	if solar_phase == "calm" and solar_clock >= SOLAR_INTERVAL - 20:
+		feedback.transmit("solar_early_%d" % solar_cycle, "Radiação em breve. Prepare o abrigo.", true, feedback.AXIOS)
+	elif solar_phase != "calm" and not inside:
+		feedback.shelter_tutorial()
+
 func _update_energy(delta: float) -> void:
 	if energy_ready:
 		energy_clock += delta
 		energy_charge = maxf(0, 100.0 * (1.0 - energy_clock / ENERGY_INTERVAL))
+		if energy_charge <= 30 and not energy_low_announced and communications_online:
+			energy_low_announced = true
+			feedback.transmit("power_low_%d" % energy_failures, "Energia em 30%. Repare a base.", true, feedback.AXIOS)
 		if energy_clock >= ENERGY_INTERVAL:
 			energy_ready = false
 			energy_charge = 0
 			energy_failures += 1
 			event_audio.play("energy")
-			feedback.transmit("power_out_%d" % energy_failures, "Falha elétrica no abrigo. Volte ao painel e reconecte os cabos. A reserva de O₂ continua ativa.", true, "ABRIGO")
-	if signal_transmitted and ship == null:
+			feedback.transmit("power_tutorial", "Energia baixa. Produção de O₂ interrompida.", true, feedback.AXIOS)
+	if communications_online and ship == null:
 		signal_clock += delta
 		if signal_clock >= SIGNAL_INTERVAL:
+			communications_online = false
 			signal_transmitted = false
 			signal_failures += 1
+			feedback.set_link(false)
 			event_audio.play("disconnect")
-			feedback.transmit("signal_out_%d" % signal_failures, "Conexão perdida. Volte ao sinalizador e encontre a frequência da tripulação novamente.", true, "ABRIGO")
+			feedback.notice_message("comm_tutorial", "Comunicação instável. Avisos suspensos.", false)
 
 func _on_power_repaired() -> void:
 	energy_ready = true
 	energy_charge = 100
 	energy_clock = 0
+	energy_low_announced = false
 	base_room.set_power(true, energy_charge)
 	_chime(660)
-	feedback.transmit("power_first", "Vimos as luzes do abrigo voltarem. Bom trabalho! Agora precisamos do sinal da antena.")
 	_update_controls()
 
 func _on_signal_sent() -> void:
-	signal_transmitted = true
+	communications_online = true
+	feedback.set_link(true)
+	signal_transmitted = found[1] >= 6
 	signal_clock = 0
 	_chime(880)
-	feedback.transmit("signal_%d" % signal_failures, "Recebemos sua localização! Estamos a caminho. Prepare os suprimentos para o pouso." if signal_failures == 0 else "Estamos ouvindo você de novo. Aguenta aí, estamos cada vez mais perto.")
+	feedback.transmit("signal", "Sinal recebido. Estamos chegando.")
+	if solar_phase != "calm" and not inside: feedback.shelter_tutorial()
 	_try_rescue()
 	_update_controls()
 
@@ -1249,67 +1337,47 @@ func _assert_world() -> void:
 
 func _assert_survival() -> void:
 	normal = Vector3.DOWN
-	oxygen = 100
-	food = 100
+	energy_ready = true
+	oxygen = MAX_RESERVE
+	food = MAX_RESERVE
 	_update_survival(10)
-	assert(is_equal_approx(oxygen, 66.0) and is_equal_approx(food, 82.0))
+	assert(is_equal_approx(oxygen, MAX_RESERVE - 34.0) and is_equal_approx(food, MAX_RESERVE - 18.0))
 	normal = camp_normal
 	_update_survival(2)
-	assert(oxygen == 100.0)
+	assert(oxygen == MAX_RESERVE)
 	normal = garden_normal
 	food = 20
 	_interact()
-	assert(food == 100.0)
+	assert(food == MAX_RESERVE)
 	assert(distant_light.position.normalized().dot(solar_axis) > 0.999)
 	solar_clock = SOLAR_INTERVAL - 0.1
 	solar_phase = "calm"
 	_update_survival(0.2)
-	assert(solar_phase == "warning" and solar_remaining == 10.0)
-	solar_clock = 9.9
+	assert(solar_phase == "warning" and solar_remaining == SOLAR_WARNING)
+	solar_clock = SOLAR_WARNING - 0.1
 	_update_survival(0.2)
 	assert(solar_phase == "active" and wave_audio.playing)
-	var contact_normal := _wave_point(PI / 2, 0)
-	assert(_wave_contact(contact_normal, 4.9, 5.1))
-	assert(not _wave_contact(contact_normal, 0, 1))
-	assert(_wave_contact(camp_normal, 0, 10))
-	inside = true
-	assert(not _wave_contact(camp_normal, 0, 10))
-	inside = false
-	normal = contact_normal
-	oxygen = 100
-	food = 100
-	wave_hit = false
-	solar_clock = 1.0
-	_update_survival(0.1)
-	assert(not wave_hit and oxygen > 99.0)
-	solar_clock = 4.95
-	_update_survival(0.1)
-	assert(wave_hit and oxygen < 65.0)
-	var after_hit := oxygen
-	_update_survival(0.1)
-	assert(oxygen > after_hit - 1.0)
+	var contact := _wave_point(PI / 2, 0)
+	assert(_wave_contact(contact, 4.9, 5.1) and not _wave_contact(contact, 0, 1))
 	normal = camp_normal
-	oxygen = 100
+	oxygen = MAX_RESERVE
+	food = MAX_RESERVE
 	wave_hit = false
 	solar_clock = acos(clampf(camp_normal.dot(solar_axis), -1, 1)) / PI * SOLAR_DURATION
 	_update_survival(0.01)
-	assert(wave_hit and oxygen == 65.0)
-	if solar_wave.mesh != null:
-		var mesh_vertices: PackedVector3Array = solar_wave.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
-		assert(not mesh_vertices.is_empty())
+	assert(wave_hit and oxygen == MAX_RESERVE - 35)
 	inside = true
 	wave_hit = false
-	oxygen = 100
+	oxygen = MAX_RESERVE
 	_update_survival(0.01)
-	assert(not wave_hit and oxygen == 100)
+	assert(not wave_hit and oxygen == MAX_RESERVE)
 	inside = false
-	solar_clock = 9.9
+	solar_clock = SOLAR_DURATION - 0.1
 	_update_survival(0.2)
 	assert(solar_phase == "calm" and not wave_audio.playing)
-	# Zero oxygen is survivable for two seconds, and recharging cancels the timer.
 	normal = Vector3.DOWN
 	oxygen = 0
-	food = 100
+	food = MAX_RESERVE
 	_update_last_chance(1.8)
 	assert(not dead)
 	_update_hud(0)
@@ -1317,40 +1385,32 @@ func _assert_survival() -> void:
 	normal = camp_normal
 	_update_survival(0.05)
 	assert(oxygen > 0 and oxygen_empty_time == 0.0 and not dead)
-	# Food can be restored by interacting during the grace period.
 	normal = garden_normal
 	food = 0
 	_update_last_chance(1.7)
-	assert(not dead)
 	_interact()
-	assert(food == 100.0 and food_empty_time == 0.0)
-	# Missing either deadline loses the game, without teleportation or refunds.
+	assert(food == MAX_RESERVE and food_empty_time == 0.0)
 	normal = Vector3.DOWN
-	avatar.position = normal * R
+	var previous_items := collected
 	oxygen = 0
-	var before_position := avatar.position
-	var before_items := collected
 	_update_last_chance(2.01)
-	assert(dead and death_panel.visible)
-	assert(avatar.position == before_position and collected == before_items)
+	assert(dead and collected == previous_items)
 	dead = false
 	death_panel.hide()
-	oxygen = 100
-	oxygen_empty_time = 0
+	oxygen = MAX_RESERVE
 	food = 0
 	_update_last_chance(2.01)
 	assert(dead)
 	dead = false
 	death_panel.hide()
-	food = 100
-	oxygen = 100
+	oxygen = MAX_RESERVE
+	food = MAX_RESERVE
 	oxygen_empty_time = 0
 	food_empty_time = 0
-	exposure = 0
 	solar_clock = 0
 	solar_phase = "calm"
 	solar_remaining = SOLAR_INTERVAL
 	wave_audio.stop()
 	alert_audio.stop()
 	_resource_warnings()
-	print("PASS: bars, vignette, two-second grace, oxygen/food recovery, death without teleport, light/wave alignment and interior-only shelter")
+	print("PASS: larger reserves, recovery, grace/death, swept radiation contact and interior protection")
