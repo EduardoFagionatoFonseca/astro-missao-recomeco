@@ -1,39 +1,59 @@
 # Astro · Um Pequeno Recomeço
 
-Uma miniaventura cozy 3D no Godot 4.7. Explore um pequeno planeta vermelho, reúna materiais e receba a nave de resgate. Substitui completamente o antigo protótipo web.
+Uma miniaventura cozy 3D no Godot 4.7.2. Isolado em Marte, explore o planeta, mantenha o abrigo funcionando e transmita sua localização para sua tripulação voltar. Inclui exportação para navegador e controles de celular.
 
 ## Jogar
 
 No Windows, abra **Jogar.cmd**. O iniciador usa o Godot instalado na pasta Downloads deste computador, no PATH ou na variável `GODOT_EXE`. Para editar, importe `project.godot` no Godot 4.7 e pressione F5. Não há dependências de rede ou plugins.
 
 - WASD ou setas: caminhar por toda a superfície esférica.
-- Espaço: saltitar. Shift: caminhar mais rápido.
-- E: recolher um item próximo ou embarcar na nave.
+- Espaço: saltitar. Movimento em velocidade fixa de 3,78 m/s; não há corrida.
+- E: recolher, entrar/sair da base, usar os painéis ou embarcar na nave.
 - E na estufa: consumir uma refeição e reabastecer alimentos.
-- Esc: pausar. Botão ♪: silenciar música e efeitos.
+- Esc: fechar minigame ou pausar. Botão Som: silenciar música e efeitos.
+- Celular: joystick e botões aparecem automaticamente; jogue na horizontal. A orientação vertical suspende a partida.
+
+Iniciar apresenta um vídeo original de 22 segundos com trilha e legendas. Pular, Espaço, Enter ou Esc abrem o guia da missão. O guia ocupa cerca de 70% da tela e mantém recursos e eventos suspensos até confirmar **ENTENDI / EXPLORAR**. Reiniciar após derrota não repete o vídeo na mesma sessão.
 
 ## Um passeio completo
 
-Reúna 6 pedras de regolito, 6 peças para a antena e 6 galões de combustível para abastecer o resgate. Os itens estão espalhados por toda a esfera, inclusive no outro hemisfério. Não há setas, dicas de interação ou mensagens centrais durante a exploração: os três contadores e o som confirmam a descoberta. Ao completar tudo, a nave desce perto do jogador. Aproxime-se e pressione E para embarcar. Os controles estão na introdução e no menu de pausa.
+Reúna 6 pedras, 6 peças para a antena e 6 galões de combustível para abastecer o resgate. Os itens estão espalhados por toda a esfera, inclusive no outro hemisfério. Cartões animados mostram interações próximas. A nave só chega quando todos os materiais estão reunidos **e a conexão de rádio está ativa**. Aproxime-se e pressione E para embarcar. A câmera mais afastada deixa mais espaço em volta do planeta.
 
-Oxigênio e alimento exigem viagens de reabastecimento: a base repõe O₂ automaticamente; uma segunda base, a estufa, fica a aproximadamente 20 metros de arco da original e oferece refeições com E. A estufa não protege da radiação. A derrota encerra a expedição e exige recomeçar do zero.
+Dentro do raio de recuperação de oxigênio, use **Entrar na base**. O interior tem circulação livre, colisão com móveis, painel de energia e terminal de comunicação. A saída preserva sua posição externa e os itens coletados.
 
-O oxigênio dura aproximadamente **29 segundos** fora da base; alimentos duram cerca de **56 segundos**. Barras mostram as duas reservas, mudam de cor e pulsam quando estão baixas. As bordas da tela escurecem progressivamente. Depois de zerar uma reserva, há **dois segundos** para chegar à base ou comer antes da derrota. Cada reserva tem seu próprio prazo; recuperar uma não salva o personagem se a outra continua esgotada. Pausar congela os prazos. A base repõe O₂ em quatro segundos.
+- **Energia:** conecte três cabos com letras iguais. O reparo restaura 100% e reinicia o ciclo de **63,75 segundos**. Em 30%, já é possível reparar preventivamente. **Sem energia, a produção de O₂ para**, inclusive dentro da base, e a reserva do traje continua caindo. A partida começa com energia ativa.
+- **Comunicação:** o rádio de avisos começa ativo e cai após **85 segundos**. Para restaurar a antena e enviar a posição ao resgate, reúna seis peças e sobreponha as ondas por três segundos. Cada queda muda a sintonia. Depois de chamar a nave, não há novas quedas durante a aproximação.
 
-Após 45 segundos de exploração, uma sirene anuncia **10 segundos de aviso** antes de uma onda solar que percorre o planeta por **10 segundos**, com som de propagação. Uma luz distante aumenta e pulsa antes da onda; o ponto luminoso e a propagação usam a mesma direção no mundo. Não há texto de alerta ou contagem regressiva na tela. A frente exclui geometricamente o abrigo. Apenas tocar a faixa causa dano: −35 de O₂ e −12 de alimento, uma vez por onda. O restante da superfície é seguro antes e depois da passagem. O teste de contato considera o deslocamento entre quadros.
+Dentro da base, o O₂ se recupera **se houver energia** e não há dano solar; o alimento continua sendo consumido. A janela fica iluminada durante o aviso e a onda, apagando quando é seguro sair. A onda e a aproximação da nave continuam enquanto você está no interior. **Nos minigames, recursos e temporizadores ficam suspensos.**
 
-Três cartões grandes mostram os objetivos 0/6. A orientação do astronauta respeita a frente +Z do modelo Kenney e o movimento usa os eixos da câmera projetados na esfera.
+As mensagens da tripulação se limitam ao início, confirmação do sinal e pouso. **Inteligência artificial AXIOS** avisa sobre energia em 30%, a primeira pane e radiação prevista. Sem comunicação, os avisos ligados à antena são descartados, inclusive os já abertos; o primeiro diagnóstico local de desconexão apenas explica que os avisos foram suspensos. A janela e os indicadores físicos continuam funcionando sem rádio.
+
+Oxigênio e alimento exigem viagens de reabastecimento: a base com energia repõe O₂; a estufa oferece refeições com E e não protege da radiação. A derrota encerra a expedição e exige recomeçar do zero.
+
+As reservas aumentaram 5%: O₂ dura cerca de **31 segundos** e comida cerca de **58 segundos**. Internamente vão até 105 unidades; a interface continua mostrando 100% quando cheias. Barras ficam vermelhas e pulsam quando baixas. Depois de zerar, há dois segundos de tolerância. Pausar congela os prazos. A base energizada repõe O₂ em aproximadamente 4,2 segundos.
+
+Após 100 segundos, o céu clareia durante dez segundos de aviso, seguidos de uma onda de dez segundos. A antena conectada antecipa a previsão em 20 segundos e mostra a primeira instrução de abrigo. O aviso físico do céu e a janela funcionam mesmo sem rádio. Um único eco baixo acompanha o aviso. **Só o interior protege**. Tocar a onda retira 35 de O₂ e 12 de alimento uma vez por onda.
+
+O₂ e alimento ficam progressivamente vermelhos e pulsam suavemente quando baixos. Um aviso de dois tons, diferente do sol, soa em 25% e 12%; na faixa crítica, pode repetir a cada oito segundos. Energia e desconexão têm sons próprios. Todos os efeitos são sintetizados originalmente, sem gravações externas.
+
+Os três objetivos mostram miniaturas dos próprios modelos, renderizadas uma vez em viewports independentes. Um tema compartilhado personaliza painéis, botões, barras e sliders com slots escuros, bordas retas e fontes maiores; não usa a aparência padrão dos controles. Os textos de jogo foram reduzidos e as primeiras falhas ensinam suas regras em contexto.
 
 É uma experiência didática, não uma simulação física de Marte ou engenharia real. O progresso não persiste após fechar o jogo.
 
+## Navegador e hospedagem
+
+O preset Web usa exportação sem threads e uma página que respeita recortes de celular. Gere com `tools/export_web.ps1`; os arquivos ficam em `build/web` e o pacote em `build/astro-web.zip`. Veja [docs/WEB.md](docs/WEB.md) para geração, teste local e hospedagem estática. Não há publicação automática.
+
 ## Arte e áudio
 
-Modelos **Kenney Space Kit 2.0 (CC0)** reutilizados do Last Light conforme solicitado. Licença em `assets/space/License.txt`, origem em https://kenney.nl/assets/space-kit e proveniência em `docs/ASSETS.md`. O planeta, acampamento, nave, iluminação e interface são montados no projeto. Trilha ambiente espacial original: acordes longos com timbre de órgão, drone grave e camadas aéreas. Sons de coleta, sirene e propagação também são sintetizados localmente, sem gravações ou músicas de terceiros. Veja `docs/AUDIO.md`.
+Modelos **Kenney Space Kit 2.0 (CC0)** reutilizados do Last Light conforme solicitado. Licença em `assets/space/License.txt`, origem em https://kenney.nl/assets/space-kit e proveniência em `docs/ASSETS.md`. O planeta, acampamento, nave, iluminação e interface são montados no projeto. Trilha ambiente espacial original: acordes longos com timbre de órgão, drone grave e camadas aéreas. Sons de coleta, ecos solares e alertas também são sintetizados localmente, sem gravações ou músicas de terceiros. Veja `docs/AUDIO.md`.
 
 ## Verificação
+
+A introdução é um filme ilustrado procedural, com imagem e trilha originais. O arquivo já está incluído em `assets/cinematics/intro.ogv`; veja [docs/CINEMATICS.md](docs/CINEMATICS.md) para regenerar.
 
 `godot --headless --path . --editor --import --quit`
 
 `godot --headless --path . -- --smoke-test`
 
-O teste verifica distribuição dos itens, alinhamento à esfera, coleta, chegada do resgate, pouso e conclusão. `godot --path . -- --capture` salva uma captura em `docs/preview.png`. Não depende de cliques automatizados.
+O teste verifica o mundo e a sobrevivência, multitoque, interior, colisões, cabos, energia, bloqueios/estabilidade do sinalizador e resgate. `godot --path . -- --capture-base` salva uma captura do interior. Veja [docs/FEATURE_VALIDATION.md](docs/FEATURE_VALIDATION.md) para testes do navegador e limitações.

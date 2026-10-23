@@ -4,3 +4,4 @@ build/
 *.tmp
 *.log
 *.uid
+docs/*.png.import
