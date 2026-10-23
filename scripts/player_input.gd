@@ -6,14 +6,11 @@ signal jump_requested
 var mobile := false
 var enabled := false
 var movement := Vector2.ZERO
-var running := false
 var stick_id := -1
-var run_ids: Array[int] = []
 var stick_center := Vector2(168, 700)
 var stick_radius := 100.0
 var action_rect := Rect2()
 var jump_rect := Rect2()
-var run_rect := Rect2()
 var action_text := "Interagir"
 var action_available := false
 
@@ -27,9 +24,9 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mobile = detect_mobile() or "--mobile-test" in OS.get_cmdline_user_args()
-	for action in ["move_left", "move_right", "move_forward", "move_back", "interact", "jump", "run"]:
+	for action in ["move_left", "move_right", "move_forward", "move_back", "interact", "jump"]:
 		if not InputMap.has_action(action): InputMap.add_action(action)
-	var bindings := {"move_left": [KEY_A, KEY_LEFT], "move_right": [KEY_D, KEY_RIGHT], "move_forward": [KEY_W, KEY_UP], "move_back": [KEY_S, KEY_DOWN], "interact": [KEY_E], "jump": [KEY_SPACE], "run": [KEY_SHIFT]}
+	var bindings := {"move_left": [KEY_A, KEY_LEFT], "move_right": [KEY_D, KEY_RIGHT], "move_forward": [KEY_W, KEY_UP], "move_back": [KEY_S, KEY_DOWN], "interact": [KEY_E], "jump": [KEY_SPACE]}
 	for action: String in bindings:
 		for key: int in bindings[action]:
 			var event := InputEventKey.new()
@@ -43,7 +40,6 @@ func _layout() -> void:
 	stick_center = Vector2(172, view.y - 174)
 	action_rect = Rect2(view.x - 290, view.y - 205, 238, 86)
 	jump_rect = Rect2(view.x - 208, view.y - 315, 156, 80)
-	run_rect = Rect2(view.x - 430, view.y - 110, 160, 76)
 	reset()
 
 func set_enabled(value: bool) -> void:
@@ -53,9 +49,7 @@ func set_enabled(value: bool) -> void:
 
 func reset() -> void:
 	stick_id = -1
-	run_ids.clear()
 	movement = Vector2.ZERO
-	running = false
 	queue_redraw()
 
 func _notification(what: int) -> void:
@@ -65,9 +59,6 @@ func direction() -> Vector2:
 	if not enabled: return Vector2.ZERO
 	var keyboard := Input.get_vector("move_left", "move_right", "move_back", "move_forward")
 	return (keyboard + movement).limit_length()
-
-func is_running() -> bool:
-	return enabled and (running or Input.is_action_pressed("run"))
 
 func _unhandled_key_input(event: InputEvent) -> void:
 	if not enabled or not event.is_pressed() or event.is_echo(): return
@@ -88,17 +79,11 @@ func _input(event: InputEvent) -> void:
 			elif action_rect.has_point(event.position):
 				if action_available: interact_requested.emit()
 			elif jump_rect.has_point(event.position): jump_requested.emit()
-			elif run_rect.has_point(event.position):
-				run_ids.append(event.index)
-				running = true
 			else: return
 		else:
 			if event.index == stick_id:
 				stick_id = -1
 				movement = Vector2.ZERO
-			elif event.index in run_ids:
-				run_ids.erase(event.index)
-				running = not run_ids.is_empty()
 			else: return
 		get_viewport().set_input_as_handled()
 		queue_redraw()
@@ -119,7 +104,6 @@ func _draw() -> void:
 	draw_circle(stick_center + Vector2(movement.x, -movement.y) * stick_radius * 0.65, 39, Color("b7d8bfcc"))
 	_draw_button(action_rect, action_text, Color("f2ba90ef") if action_available else Color("a3b7c477"))
 	_draw_button(jump_rect, "Saltar", Color("b7d8bfdd"))
-	_draw_button(run_rect, "Correr", Color("f2ba90ef") if running else Color("a3b7c4bb"))
 
 func _draw_button(rect: Rect2, text: String, color: Color) -> void:
 	var style := StyleBoxFlat.new()

@@ -1,5 +1,7 @@
 # Validação da versão cozy
 
+Registro histórico do protótipo anterior ao interior da base. As regras e verificações atuais, incluindo proteção solar somente no interior, estão em `FEATURE_VALIDATION.md`.
+
 - Godot 4.7: importação dos sete modelos OBJ concluída.
 - Execução real com OpenGL 3.3 na GPU: captura da introdução e do mundo inspecionadas. Ajustadas iluminação, barra de progresso e posição dos painéis após revisão.
 - Teste sem janela: posição e orientação dos 18 itens sobre a esfera, seis itens de cada tipo, movimento contínuo atravessando hemisférios, interação de coleta, surgimento da nave, pouso e encerramento.

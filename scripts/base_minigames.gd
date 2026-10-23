@@ -20,6 +20,28 @@ var stability: ProgressBar
 var hold_time := 0.0
 var completed := false
 var frozen := false
+var target_frequency := 64.0
+var target_alignment := 38.0
+var scope: Control
+var scope_time := 0.0
+
+class SignalScope extends Control:
+	var game: Control
+	func _draw() -> void:
+		draw_rect(Rect2(Vector2.ZERO, size), Color("0c1f2c"))
+		for i in range(1, 8):
+			draw_line(Vector2(i * size.x / 8, 0), Vector2(i * size.x / 8, size.y), Color("233f4a"), 1)
+		var reference := PackedVector2Array()
+		var received := PackedVector2Array()
+		var frequency_error: float = (game.frequency.value - game.target_frequency) / 40.0
+		var phase_error: float = (game.alignment.value - game.target_alignment) / 20.0
+		for i in range(121):
+			var x := i / 120.0
+			var phase: float = x * TAU * 3 - game.scope_time * 2
+			reference.append(Vector2(x * size.x, size.y / 2 + sin(phase) * 23))
+			received.append(Vector2(x * size.x, size.y / 2 + sin(phase + x * frequency_error * TAU + phase_error) * 23))
+		draw_polyline(reference, Color("425b68"), 3, true)
+		draw_polyline(received, Color("b7d8bf"), 3, true)
 
 class CableDiagram extends Control:
 	var game: Control
@@ -153,7 +175,7 @@ func _refresh_connections() -> void:
 		sources[i].text = ("OK " if connected[i] else "> " if selected == i else "") + SYMBOLS[i]
 	if is_instance_valid(diagram): diagram.queue_redraw()
 
-func open_signal(power: bool, parts: int, sent: bool) -> void:
+func open_signal(power: bool, parts: int, sent: bool, revision := 0) -> void:
 	_clear()
 	mode = "signal"
 	_text("02 / SINALIZADOR DE RESGATE", 32, Color("92bde0"))
@@ -163,8 +185,14 @@ func open_signal(power: bool, parts: int, sent: bool) -> void:
 		body.add_child(_button("Voltar à base", close))
 		completed = true
 		return
-	_text("Ajuste os dois controles até limpar a interferência.\nMantenha o sinal acima de 92% por 3 segundos.")
+	target_frequency = 24.0 + posmod(40 + revision * 17, 53)
+	target_alignment = 22.0 + posmod(16 + revision * 23, 57)
+	_text("Sobreponha as ondas ajustando frequência e alinhamento.\nMantenha o sinal acima de 92% por 3 segundos.", 24)
 	message = _text("Procurando a frequência da tripulação…", 25, Color("b7d8bf"))
+	scope = SignalScope.new()
+	scope.game = self
+	scope.custom_minimum_size = Vector2(820, 74)
+	body.add_child(scope)
 	_text("FREQUÊNCIA", 21)
 	frequency = _slider(20)
 	_text("ALINHAMENTO DA ANTENA", 21)
@@ -180,7 +208,7 @@ func _slider(value: float) -> HSlider:
 	slider.max_value = 100
 	slider.step = 1
 	slider.value = value
-	slider.custom_minimum_size.y = 68
+	slider.custom_minimum_size.y = 56
 	var grabber := GradientTexture2D.new()
 	grabber.width = 42
 	grabber.height = 42
@@ -192,11 +220,13 @@ func _slider(value: float) -> HSlider:
 	return slider
 
 func signal_quality() -> float:
-	return clampf(100.0 - absf(frequency.value - 64) * 1.5 - absf(alignment.value - 38) * 1.5, 0, 100)
+	return clampf(100.0 - absf(frequency.value - target_frequency) * 1.5 - absf(alignment.value - target_alignment) * 1.5, 0, 100)
 
 func _process(delta: float) -> void:
 	if not visible or frozen or mode != "signal" or completed: return
 	var quality := signal_quality()
+	scope_time += delta
+	scope.queue_redraw()
 	hold_time = minf(3.0, hold_time + delta) if quality >= 92 else 0.0
 	stability.value = hold_time / 3.0 * 100
 	message.text = "Sinal %d%%  /  %s" % [quality, "Transmitindo… %.1f / 3 s" % hold_time if quality >= 92 else "Ajuste até estabilizar"]

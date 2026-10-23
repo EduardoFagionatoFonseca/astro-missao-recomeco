@@ -25,7 +25,7 @@ Envie **todos os arquivos** de `build/web` para hospedagem estática HTTPS, mant
 ## Celular
 
 - Detecção combina identificação Android/iOS e capacidade de toque, incluindo iPadOS em modo desktop. Computadores touch continuam com a interface de computador. A largura da janela não ativa controles mobile.
-- Dedos independentes permitem mover e correr simultaneamente. Pausa, troca de tela, perda de foco e redimensionamento limpam os toques ativos.
+- Dedos independentes permitem mover e saltar/interagir simultaneamente. Não há corrida. Pausa, troca de tela, perda de foco e redimensionamento limpam os toques ativos.
 - A página respeita `safe-area-inset` e bloqueia scroll sobre o canvas. Na orientação vertical, partida e puzzle aguardam o aparelho ser girado.
 - Vídeo Theora 960×540/24 fps reproduzido pelo Godot após Iniciar, com legendas separadas. Falha/travamento do decoder tem texto de contexto e limite de duração. Pular fica disponível desde o início.
 

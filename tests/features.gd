@@ -11,12 +11,12 @@ func run(game: Node3D) -> void:
 	controls._input(touch)
 	assert(controls.direction().x > 0.7)
 	touch.index = 8
-	touch.position = controls.run_rect.get_center()
+	touch.position = controls.jump_rect.get_center()
 	controls._input(touch)
-	assert(controls.is_running() and controls.direction().x > 0.7)
+	assert(controls.direction().x > 0.7)
 	touch.pressed = false
 	controls._input(touch)
-	assert(not controls.is_running() and controls.direction().x > 0.7)
+	assert(controls.direction().x > 0.7)
 	controls.set_enabled(false)
 	assert(controls.movement == Vector2.ZERO and controls.stick_id == -1)
 	controls.mobile = controls.detect_mobile()
@@ -78,6 +78,7 @@ func run(game: Node3D) -> void:
 	assert(not game.energy_ready)
 	game.signal_transmitted = false
 	game.energy_charge = 0
+	load("res://tests/mission_balance.gd").new().run(game)
 	game._update_controls()
 	assert(ResourceLoader.exists("res://assets/cinematics/intro.ogv"))
 	print("PASS: multi-touch, input cancellation, interior bounds/furniture, station proximity, cables, signal locks/stability/pause, power depletion, return position and video asset")
