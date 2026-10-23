@@ -2,6 +2,8 @@
 setlocal
 cd /d "%~dp0"
 if defined GODOT_EXE if exist "%GODOT_EXE%" goto launch
+set "GODOT_EXE=%USERPROFILE%\Downloads\Godot_v4.7.2-stable_win64.exe\Godot_v4.7.2-stable_win64.exe"
+if exist "%GODOT_EXE%" goto launch
 set "GODOT_EXE=%USERPROFILE%\Downloads\Godot_v4.7-stable_win64.exe\Godot_v4.7-stable_win64.exe"
 if exist "%GODOT_EXE%" goto launch
 for %%G in (godot.exe godot4.exe) do for %%P in (%%~$PATH:G) do set "GODOT_EXE=%%P"
