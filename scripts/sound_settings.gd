@@ -22,11 +22,11 @@ func _ready() -> void:
 	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(shade)
 	panel = PanelContainer.new()
-	panel.custom_minimum_size = Vector2(820, 0)
+	panel.custom_minimum_size = Vector2(920, 0)
 	panel.add_theme_stylebox_override("panel", preload("res://scripts/ui_theme.gd").box(Color("171c23"), Color("4b5862"), 36))
 	add_child(panel)
 	var body := VBoxContainer.new()
-	body.add_theme_constant_override("separation", 22)
+	body.add_theme_constant_override("separation", 18)
 	panel.add_child(body)
 	_label(body, "CONFIGURAÇÕES", 22, Color("bad3a7"))
 	_label(body, "Som do seu jeito.", 42)
@@ -40,7 +40,7 @@ func _ready() -> void:
 		slider.min_value = 0
 		slider.max_value = 100
 		slider.step = 1
-		slider.custom_minimum_size = Vector2(740, 34)
+		slider.custom_minimum_size = Vector2(840, 44)
 		slider.value = roundf(AudioServer.get_bus_volume_linear(AudioServer.get_bus_index(BUSES[i])) * 100)
 		values[i].text = "%d%%" % slider.value
 		slider.value_changed.connect(func(value: float): _set_volume(BUSES[i], value / 100); values[i].text = "%d%%" % value)
@@ -48,7 +48,7 @@ func _ready() -> void:
 		body.add_child(slider)
 	var close_button := Button.new()
 	close_button.text = "PRONTO"
-	close_button.custom_minimum_size.y = 76
+	close_button.custom_minimum_size.y = 96
 	close_button.pressed.connect(close)
 	body.add_child(close_button)
 	get_viewport().size_changed.connect(_layout)

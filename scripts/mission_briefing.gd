@@ -42,7 +42,7 @@ func _ready() -> void:
 	buttons.add_child(back_button)
 	next_button = Button.new()
 	next_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	next_button.custom_minimum_size.y = 82
+	next_button.custom_minimum_size.y = 98
 	next_button.pressed.connect(_next)
 	buttons.add_child(next_button)
 	get_viewport().size_changed.connect(_layout)
@@ -65,7 +65,7 @@ func _step(title: String, text: String) -> void:
 
 func configure(icons: Array[Texture2D], mobile: bool) -> void:
 	item_icons = icons
-	controls_label.text = "Joystick mover   /   Toque usar" if mobile else "WASD mover   /   Espaço saltar   /   E usar"
+	controls_label.text = "Joystick mover   /   Saltar: subir plataformas   /   Toque usar" if mobile else "WASD mover   /   Espaço: subir plataformas   /   E usar"
 	_render()
 
 func open() -> void:

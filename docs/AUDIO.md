@@ -14,3 +14,9 @@ Os efeitos são sintetizados no Godot. As duas músicas de exploração/base sã
 - Derrota: acorde grave descendente de 1,5 segundo, em canal próprio.
 
 Os efeitos ficam em `scripts/event_audio.gd`, com geração determinística e canais separados. A engrenagem do menu e **Som**, durante a partida, abrem quatro volumes independentes: geral, músicas, interações e avisos. Zero silencia somente o canal escolhido; os ganhos persistem em `user://audio.cfg`. Abrir configurações suspende recursos e eventos. A pausa suspende música e alertas. A coleta não interrompe os avisos. Os diálogos de rádio são textos na interface, sem voz gravada.
+
+## Correção da saída Web
+
+Músicas e efeitos usam explicitamente `AudioServer.PLAYBACK_TYPE_STREAM`, com os quatro canais definidos em `default_bus_layout.tres` antes da inicialização da cena. O caminho anterior de reprodução Sample, combinado com os canais criados em execução, indicava `playing` sem produzir sinal na saída Web. A documentação descreve a escolha entre [Sample e Stream](https://docs.godotengine.org/en/latest/tutorials/audio/audio_streams.html).
+
+O teste `tests/web_audio_mobile.cjs` mede a saída real do grafo Web Audio, sem liberar autoplay por flag: menu, vídeo, exploração e base devem ter RMS maior que zero. Também verifica silêncio ao zerar Geral e retorno do sinal ao restaurar o volume. Assim, verificar apenas `AudioStreamPlayer.playing` deixa de ser suficiente para validar áudio.

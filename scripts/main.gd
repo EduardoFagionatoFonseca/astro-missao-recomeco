@@ -33,6 +33,8 @@ var paused := false
 var won := false
 var elapsed := 0.0
 var hop := 0.0
+var altitude := 0.0
+var terrain := preload("res://scripts/planet_terrain.gd").new()
 var hop_velocity := 0.0
 var walk := 0.0
 var ship: Node3D
@@ -120,6 +122,7 @@ var pause_ui: Button
 var mute_ui: Button
 var portrait_hint: PanelContainer
 var hud_root: Control
+var qa_clock := 0.0
 
 func _ready() -> void:
 	rng.seed = 60318
@@ -233,7 +236,7 @@ func _align(node: Node3D, up: Vector3, forward: Vector3) -> void:
 func _surface(up: Vector3) -> Node3D:
 	var root := Node3D.new()
 	add_child(root)
-	root.position = up * R
+	root.position = up * (R + terrain.height_at(up))
 	_align(root, up, Vector3.FORWARD)
 	return root
 
@@ -307,14 +310,14 @@ func _build_environment() -> void:
 	distant_halo.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 
 func _build_planet() -> void:
-	var mesh := SphereMesh.new()
-	mesh.radius = R
-	mesh.height = R * 2
-	mesh.radial_segments = 72
-	mesh.rings = 36
-	var terrain := _mesh(self, mesh, Color("bd7f61"))
-	terrain.name = "LittleMars"
-	# All landmarks sit directly on the sphere; there is no flat hidden terrain.
+	var planet := _mesh(self, terrain.make_planet(), Color.WHITE)
+	planet.name = "LittleMars"
+	planet.material_override.vertex_color_use_as_albedo = true
+	for platform in terrain.platforms:
+		var ledge := _mesh(self, terrain.make_platform(platform), Color.WHITE)
+		ledge.name = "JumpLedge"
+		ledge.material_override.vertex_color_use_as_albedo = true
+		ledge.material_override.cull_mode = BaseMaterial3D.CULL_DISABLED
 	for i in range(65):
 		var n := _fibonacci(i, 65)
 		if n.dot(Vector3.UP) > 0.975:
@@ -391,7 +394,7 @@ func _build_items() -> void:
 		var n := _fibonacci(i, TOTAL)
 		# First pickup is visible by the camp; the rest invite a complete orbit.
 		if i == 0:
-			n = Vector3(-0.18, 1, -0.2).normalized()
+			n = terrain.platforms[0].normal
 		var root := _surface(n)
 		var kind := 1 if i < GOALS[1] else 0 if i < GOALS[1] + GOALS[0] else 2
 		var visual := Node3D.new()
@@ -418,6 +421,11 @@ func _build_items() -> void:
 
 func _process(delta: float) -> void:
 	check_time += delta
+	if OS.has_feature("web") and "--web-test" in OS.get_cmdline_user_args():
+		qa_clock += delta
+		if qa_clock >= 0.1:
+			qa_clock = 0
+			_publish_web_test_state()
 	_update_music(delta)
 	if capture and check_time > 2.0:
 		var capture_path := "res://docs/solar-preview.png" if "--capture-fog" in OS.get_cmdline_user_args() else "res://docs/preview.png"
@@ -442,6 +450,7 @@ func _process(delta: float) -> void:
 	if auto_check and check_time > 0.4:
 		auto_check = false
 		load("res://tests/features.gd").new().run(self)
+		load("res://tests/terrain_mobile.gd").new().run(self)
 		load("res://tests/radio_resources.gd").new().run(self)
 		for i in range(TOTAL): _collect(i)
 		assert(collected == TOTAL and found == GOALS and ship != null)
@@ -486,18 +495,29 @@ func _update_movement(delta: float) -> void:
 	var direction := (right * input.x + forward * input.y)
 	if direction.length() > 0.05:
 		var speed := MOVE_SPEED
-		normal = (normal + direction * speed / R * delta).normalized()
+		var candidate := (normal + direction * speed / R * delta).normalized()
+		var floor_before := terrain.height_at(normal)
+		var floor_after := terrain.height_at(candidate)
+		if floor_after <= floor_before + 0.10 or altitude >= floor_after - 0.025:
+			normal = candidate
 		var transport := Quaternion(old, normal)
 		north = (transport * north).slide(normal).normalized()
 		_align(avatar, normal, direction)
 		walk += delta * 8.0
 	else:
 		_align(avatar, normal, -avatar.basis.z)
-	if hop > 0 or hop_velocity > 0:
+	var ground := terrain.height_at(normal)
+	if altitude > ground + 0.001 or hop_velocity > 0:
 		hop_velocity -= 4.5 * delta
-		hop = maxf(0, hop + hop_velocity * delta)
-		if hop == 0: hop_velocity = 0
-	avatar.position = normal * (R + hop)
+		altitude += hop_velocity * delta
+		if altitude <= ground and hop_velocity <= 0:
+			altitude = ground
+			hop_velocity = 0
+	else:
+		altitude = ground
+		hop_velocity = 0
+	hop = maxf(0, altitude - ground)
+	avatar.position = normal * (R + altitude)
 	astronaut.position.y = absf(sin(walk)) * input.length() * 0.055
 	astronaut.rotation.z = sin(walk) * input.length() * 0.045
 	var desired := normal * 39.0 - north * 29.0
@@ -510,6 +530,9 @@ func _item_available(item: Dictionary) -> bool:
 func _sync_resource_visibility() -> void:
 	for item in items:
 		item.node.visible = not inside and not item.taken and _item_available(item)
+
+func _can_reach(item: Dictionary) -> bool:
+	return normal.dot(item.normal) > cos(1.25 / R) and absf(altitude - terrain.height_at(item.normal)) < 0.24
 
 func _nearest() -> int:
 	var index := -1
@@ -566,7 +589,7 @@ func _update_ship(delta: float) -> void:
 	if ship == null: return
 	ship_timer += delta
 	var height := pow(maxf(0, 1.0 - ship_timer / 9.0), 2.0) * 20.0
-	ship.position = ship_normal * (R + height)
+	ship.position = ship_normal * (R + terrain.height_at(ship_normal) + height)
 	if ship_timer >= 9.0 and not ship_landed:
 		ship_landed = true
 		feedback.transmit("landed", "Pousamos. Venha à nave.", true)
@@ -601,7 +624,7 @@ func _interact() -> void:
 		_chime(550)
 		return
 	var near := _nearest()
-	if near >= 0 and normal.dot(items[near].normal) > cos(1.25 / R):
+	if near >= 0 and _can_reach(items[near]):
 		_collect(near)
 
 func _at_camp() -> bool:
@@ -734,7 +757,7 @@ func _button(text: String, callback: Callable) -> Button:
 	var button := Button.new()
 	button.theme = preload("res://scripts/ui_theme.gd").create()
 	button.text = text
-	button.custom_minimum_size.y = 76
+	button.custom_minimum_size.y = 96
 	button.add_theme_font_size_override("font_size", 30)
 	button.pressed.connect(callback)
 	return button
@@ -998,6 +1021,7 @@ func _show_ending() -> void:
 
 func _build_audio() -> void:
 	music = AudioStreamPlayer.new()
+	music.playback_type = AudioServer.PLAYBACK_TYPE_STREAM
 	add_child(music)
 	music.bus = "Music"
 	music.stream = preload("res://assets/audio/space-galaxy.mp3")
@@ -1005,6 +1029,7 @@ func _build_audio() -> void:
 	music.volume_db = -10
 	music.play()
 	base_music = AudioStreamPlayer.new()
+	base_music.playback_type = AudioServer.PLAYBACK_TYPE_STREAM
 	base_music.bus = "Music"
 	base_music.stream = preload("res://assets/audio/space-ship.mp3")
 	base_music.stream.loop = true
@@ -1012,6 +1037,7 @@ func _build_audio() -> void:
 	add_child(base_music)
 	base_music.play()
 	sound = AudioStreamPlayer.new()
+	sound.playback_type = AudioServer.PLAYBACK_TYPE_STREAM
 	sound.bus = "Interactions"
 	add_child(sound)
 	event_audio = preload("res://scripts/event_audio.gd").new()
@@ -1125,6 +1151,7 @@ func _update_controls() -> void:
 	minigames.frozen = paused or portrait_hint.visible or audio_settings.visible
 	var active := playing and not paused and not dead and not won and not transitioning and not minigames.visible and not portrait_hint.visible and not audio_settings.visible
 	controls.set_enabled(active)
+	controls.jump_available = not inside
 	_sync_resource_visibility()
 	if feedback.link_online != communications_online: feedback.set_link(communications_online)
 	feedback.active = active
@@ -1136,8 +1163,14 @@ func _update_controls() -> void:
 	power_label.text = "ENERGIA %d%%" % energy_charge if energy_ready else "ENERGIA OFF / O₂ OFF"
 	base_status.text = "RÁDIO ONLINE" if communications_online else "RÁDIO OFFLINE"
 
+func _publish_web_test_state() -> void:
+	var forward := camera.global_basis.y.slide(normal).normalized()
+	var right := camera.global_basis.x.slide(normal).normalized()
+	var state := {"normal": [normal.x, normal.y, normal.z], "right": [right.x, right.y, right.z], "forward": [forward.x, forward.y, forward.z], "inside": inside, "hop": hop, "altitude": altitude, "floor": terrain.height_at(normal), "mobile": controls.mobile, "enabled": controls.enabled, "stick": controls.stick_id, "playing": playing, "dead": dead, "oxygen": oxygen, "platform": [terrain.platforms[0].normal.x, terrain.platforms[0].normal.y, terrain.platforms[0].normal.z], "camp": [camp_normal.x, camp_normal.y, camp_normal.z], "position": [avatar.position.x, avatar.position.y, avatar.position.z]}
+	JavaScriptBridge.eval("window.__astroQA = %s;" % JSON.stringify(state))
+
 func _jump() -> void:
-	if controls.enabled and not inside and hop == 0: hop_velocity = 2.4
+	if controls.enabled and not inside and hop == 0 and hop_velocity == 0: hop_velocity = 2.4
 
 func _update_prompt() -> void:
 	if not controls.enabled: return
@@ -1157,7 +1190,7 @@ func _update_prompt() -> void:
 		text = "Comer"
 	else:
 		var near := _nearest()
-		if near >= 0 and normal.dot(items[near].normal) > cos(1.25 / R):
+		if near >= 0 and _can_reach(items[near]):
 			target = "collect"
 			text = "Coletar"
 	controls.action_text = text if not text.is_empty() else "Interagir"
@@ -1204,6 +1237,7 @@ func _apply_location(to_inside: bool) -> void:
 	inside = to_inside
 	if inside: exposure = 0.0
 	hop = 0
+	altitude = 0 if inside else terrain.height_at(exterior_normal)
 	hop_velocity = 0
 	base_room.visible = inside
 	for node in exterior_nodes: node.visible = not inside
@@ -1217,7 +1251,7 @@ func _apply_location(to_inside: bool) -> void:
 	else:
 		normal = exterior_normal
 		north = exterior_north
-		avatar.position = normal * R
+		avatar.position = normal * (R + altitude)
 		_align(avatar, normal, north)
 		camera.position = normal * 39.0 - north * 29.0
 		camera.look_at(normal * 2.0, north)
@@ -1299,11 +1333,11 @@ func _assert_world() -> void:
 	assert(items.size() == TOTAL)
 	var kinds := [0, 0, 0]
 	for item in items:
-		assert(absf(item.node.position.length() - R) < 0.01)
+		assert(absf(item.node.position.length() - (R + terrain.height_at(item.normal))) < 0.01)
 		assert(item.node.basis.y.dot(item.normal) > 0.99)
 		kinds[item.kind] += 1
 	assert(kinds == GOALS)
-	assert(absf(avatar.position.length() - R) < 0.01)
+	assert(avatar.position.length() >= R + terrain.height_at(normal) - 0.02)
 	for input_direction in [Vector2(0, 1), Vector2(0, -1), Vector2(1, 0), Vector2(-1, 0)]:
 		normal = Vector3.UP
 		north = Vector3.FORWARD
@@ -1318,12 +1352,16 @@ func _assert_world() -> void:
 	var crossed_hemisphere := false
 	pad = Vector2(0, 1)
 	for i in range(1800):
+		if i % 55 == 0 and hop == 0: hop_velocity = 2.4
 		_update_movement(0.02)
-		assert(absf(avatar.position.length() - R) < 0.01)
+		assert(avatar.position.length() >= R + terrain.height_at(normal) - 0.02)
 		if normal.y < -0.5:
 			crossed_hemisphere = true
 	assert(crossed_hemisphere)
 	pad = Vector2.ZERO
+	altitude = 0
+	hop = 0
+	hop_velocity = 0
 	normal = Vector3.UP
 	north = Vector3.FORWARD
 	avatar.position = normal * R
