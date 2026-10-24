@@ -1,7 +1,7 @@
 extends RefCounted
 
 func run(game: Node3D) -> void:
-	assert(game.EXPOSURE_LIMIT == 5)
+	assert(game.EXPOSURE_LIMIT == 3)
 	var sound: Control = game.audio_settings
 	var previous: float = sound.volumes["Music"]
 	sound._set_volume("Music", 1, false)
@@ -20,15 +20,15 @@ func run(game: Node3D) -> void:
 	game.food_empty_time = 0
 	game._update_hud(0)
 	assert(game.survival_timer.visible)
-	assert(game.survival_timer_label.text.contains("RADIAÇÃO   3,8 s"))
-	assert(game.survival_timer_label.text.contains("O₂   3,0 s"))
-	assert(game.survival_timer_label.text.contains("COMIDA   3,0 s"))
+	assert(game.survival_timer_label.text.contains("RADIAÇÃO   1,8 s"))
+	assert(not game.survival_timer_label.text.contains("O₂"))
+	assert(not game.survival_timer_label.text.contains("COMIDA"))
 	game.oxygen = 0
 	game.food = 0
 	game.oxygen_empty_time = 1
 	game.food_empty_time = 1
 	game._update_hud(0)
-	assert(game.survival_timer_label.text.contains("O₂   1,0 s") and game.survival_timer_label.text.contains("COMIDA   1,0 s"))
+	assert(game.survival_timer_label.text.contains("O₂   2,0 s") and game.survival_timer_label.text.contains("COMIDA   2,0 s"))
 	game._apply_location(true)
 	game.energy_ready = false
 	game._update_hud(0)

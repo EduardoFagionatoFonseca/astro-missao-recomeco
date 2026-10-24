@@ -15,8 +15,8 @@ const MOVE_SPEED := 3.8934
 const PLANET_MUSIC_GAIN := 0.16
 const BASE_MUSIC_GAIN := 0.24
 const MAX_RESERVE := 105.0
-const EXPOSURE_LIMIT := 5.0
-const VITAL_GRACE := 2.0
+const EXPOSURE_LIMIT := 3.0
+const VITAL_GRACE := 3.0
 const SHELTER_RADIUS := 3.1
 const CREAM := Color("f0e9d9")
 const MUTED := Color("a3b7c4")
@@ -1008,14 +1008,15 @@ func _update_survival_timer() -> void:
 	if playing and not dead and not won:
 		if solar_phase == "active" and not inside:
 			lines.append("RADIAÇÃO   %.1f s" % maxf(0, EXPOSURE_LIMIT - exposure))
-		if _percent(oxygen) <= 12 and not (_at_camp() and energy_ready):
+		if oxygen <= 0.0 and not (_at_camp() and energy_ready):
 			lines.append("O₂   %.1f s" % (oxygen / OXYGEN_RATE + maxf(0, VITAL_GRACE - oxygen_empty_time)))
-		if _percent(food) <= 12:
+		if food <= 0.0:
 			lines.append("COMIDA   %.1f s" % (food / FOOD_RATE + maxf(0, VITAL_GRACE - food_empty_time)))
 	survival_timer.visible = not lines.is_empty()
 	survival_timer_label.text = "\n".join(lines).replace(".", ",")
 	survival_timer.reset_size()
-	survival_timer.position = Vector2((get_viewport().get_visible_rect().size.x - survival_timer.size.x) / 2, 310)
+	var view := get_viewport().get_visible_rect().size
+	survival_timer.position = Vector2((view.x - survival_timer.size.x) / 2, view.y - 170)
 
 func _finish() -> void:
 	if won: return
@@ -1444,13 +1445,13 @@ func _assert_survival() -> void:
 	normal = Vector3.DOWN
 	var previous_items := collected
 	oxygen = 0
-	_update_last_chance(2.01)
+	_update_last_chance(3.01)
 	assert(dead and collected == previous_items)
 	dead = false
 	death_panel.hide()
 	oxygen = MAX_RESERVE
 	food = 0
-	_update_last_chance(2.01)
+	_update_last_chance(3.01)
 	assert(dead)
 	dead = false
 	death_panel.hide()

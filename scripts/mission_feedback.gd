@@ -82,7 +82,7 @@ func _label(text: String, size: int, color: Color) -> Label:
 func _layout() -> void:
 	var view := get_viewport_rect().size
 	radio.position = Vector2((view.x - 900) / 2, view.y - 270)
-	notice.position = Vector2((view.x - 900) / 2, 175)
+	notice.position = Vector2((view.x - 900) / 2, view.y - 390)
 
 func transmit(id: String, text: String, urgent := false, from := "TRIPULAÇÃO", requires_link := true, interrupt := false) -> void:
 	if requires_link and not link_online: return
