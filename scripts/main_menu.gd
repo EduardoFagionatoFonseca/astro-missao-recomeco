@@ -33,17 +33,11 @@ func _ready() -> void:
 	_text("Um pequeno recomeço.", 38)
 	_text("Explore Marte. Cuide do abrigo. Volte para casa.", 26, Color("b8c2c8"))
 	actions = PanelContainer.new()
-	actions.add_theme_stylebox_override("panel", preload("res://scripts/ui_theme.gd").box(Color("111e2aeb"), Color("738e92"), 24))
+	actions.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
 	add_child(actions)
 	var stack := VBoxContainer.new()
 	stack.add_theme_constant_override("separation", 14)
 	actions.add_child(stack)
-	var hint := Label.new()
-	hint.text = "UMA MISSÃO. UM SINAL. UM RECOMEÇO."
-	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	hint.add_theme_font_size_override("font_size", 22)
-	hint.add_theme_color_override("font_color", Color("bad3a7"))
-	stack.add_child(hint)
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 18)
 	stack.add_child(row)
@@ -54,6 +48,12 @@ func _ready() -> void:
 	start.text = "COMEÇAR   >"
 	start.custom_minimum_size = Vector2(560, 112)
 	start.add_theme_font_size_override("font_size", 36)
+	for state in ["normal", "hover", "pressed"]:
+		var color: Color = {"normal": Color("c99c76"), "hover": Color("dfb28a"), "pressed": Color("aa7958")}[state]
+		start.add_theme_stylebox_override(state, preload("res://scripts/ui_theme.gd").box(color, Color("e9c6a0"), 20))
+	start.add_theme_color_override("font_color", Color("241e1a"))
+	start.add_theme_color_override("font_hover_color", Color("241e1a"))
+	start.add_theme_color_override("font_pressed_color", Color("241e1a"))
 	start.pressed.connect(func(): start_requested.emit())
 	row.add_child(start)
 	gear = Button.new()
