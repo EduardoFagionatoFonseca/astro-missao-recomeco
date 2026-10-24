@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 const {chromium, devices} = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 
 (async () => {
-  const browser = await chromium.launch({headless:true, channel:process.env.BROWSER_CHANNEL || 'chrome', args:['--autoplay-policy=no-user-gesture-required']});
+  const browser = await chromium.launch({headless:true, channel:process.env.BROWSER_CHANNEL || 'chrome'});
   const results = [];
   try {
     for (const mobile of [false, true]) {
@@ -25,7 +25,23 @@ const {chromium, devices} = require(process.env.PLAYWRIGHT_MODULE || 'playwright
         const sy = box.y + y / 900 * box.height;
         if (mobile) await page.touchscreen.tap(sx,sy); else await page.mouse.click(sx,sy);
       };
-      await click(720,540);
+      const menuClick = async offset => click(720+offset,782);
+      await menuClick(354); // Gear beside the centered Start button.
+      await page.waitForTimeout(300);
+      await click(720,425); // Music gain, independent from alerts and interactions.
+      await page.screenshot({path:`docs/web-${mobile?'mobile':'desktop'}-settings.png`});
+      await click(720,745);
+      if (!mobile) {
+        await page.waitForTimeout(800); // Allow the browser's user filesystem to flush.
+        await page.reload({waitUntil:'networkidle'});
+        await page.locator('#status').waitFor({state:'hidden',timeout:60000});
+        await page.waitForTimeout(700);
+        await menuClick(354);
+        await page.waitForTimeout(250);
+        await page.screenshot({path:'docs/web-desktop-settings-restored.png'});
+        await click(720,745);
+      }
+      await menuClick(0);
       await page.waitForTimeout(1800);
       await page.screenshot({path:`docs/web-${mobile?'mobile':'desktop'}-video.png`});
       // Skip at the right edge, anchored to viewport rather than reference width.
@@ -35,6 +51,9 @@ const {chromium, devices} = require(process.env.PLAYWRIGHT_MODULE || 'playwright
       await page.waitForTimeout(600);
       await page.screenshot({path:`docs/web-${mobile?'mobile':'desktop'}-briefing.png`});
       await click(720,765);
+      await page.waitForTimeout(350);
+      await page.screenshot({path:`docs/web-${mobile?'mobile':'desktop'}-briefing2.png`});
+      await click(900,765);
       await page.waitForTimeout(700);
       await page.screenshot({path:`docs/web-${mobile?'mobile':'desktop'}-world.png`});
       if (mobile) await click(720,825); else await page.keyboard.press('e');

@@ -12,6 +12,9 @@ var caption: Label
 var clock := 0.0
 var active := false
 var fallback := false
+var clip_duration := DURATION
+var captions: Array = CAPTIONS
+var clip_path := "res://assets/cinematics/intro.ogv"
 
 func _ready() -> void:
 	theme = preload("res://scripts/ui_theme.gd").create()
@@ -27,6 +30,7 @@ func _ready() -> void:
 	frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(frame)
 	player = VideoStreamPlayer.new()
+	player.bus = "Music"
 	player.expand = true
 	player.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	frame.add_child(player)
@@ -64,15 +68,17 @@ func _ready() -> void:
 	add_child(skip)
 	hide()
 
-func begin(muted: bool) -> void:
+func begin(muted: bool, departure := false) -> void:
 	clock = 0
 	active = true
 	show()
-	caption.text = CAPTIONS[0]
-	var path := "res://assets/cinematics/intro.ogv"
-	fallback = not ResourceLoader.exists(path)
+	clip_duration = 14.0 if departure else DURATION
+	captions = ["Você conseguiu voltar.", "Marte ficou para trás.", "Nenhuma missão termina sozinha."] if departure else CAPTIONS
+	clip_path = "res://assets/cinematics/outro.ogv" if departure else "res://assets/cinematics/intro.ogv"
+	caption.text = captions[0]
+	fallback = not ResourceLoader.exists(clip_path)
 	if not fallback:
-		player.stream = load(path)
+		player.stream = load(clip_path)
 		player.volume_db = -80 if muted else -8
 		player.play()
 		fallback = player.stream == null
@@ -85,8 +91,8 @@ func _process(delta: float) -> void:
 	if clock > 4.0 and time < 0.1:
 		fallback = true
 		player.stop()
-	caption.text = CAPTIONS[mini(3, int(time / 5.5))]
-	if clock >= DURATION + 3 or (fallback and clock >= DURATION): _finish()
+	caption.text = captions[mini(captions.size() - 1, int(time / (clip_duration / captions.size())))]
+	if clock >= clip_duration + 3 or (fallback and clock >= clip_duration): _finish()
 
 func _unhandled_key_input(event: InputEvent) -> void:
 	if active and event.is_pressed() and not event.is_echo() and event is InputEventKey:

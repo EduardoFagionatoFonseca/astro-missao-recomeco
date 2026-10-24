@@ -13,6 +13,7 @@ var action_rect := Rect2()
 var jump_rect := Rect2()
 var action_text := "Interagir"
 var action_available := false
+var jump_available := true
 
 static func detect_mobile() -> bool:
 	if OS.has_feature("web"):
@@ -38,8 +39,8 @@ func _ready() -> void:
 func _layout() -> void:
 	var view := get_viewport_rect().size
 	stick_center = Vector2(172, view.y - 174)
-	action_rect = Rect2(view.x - 290, view.y - 205, 238, 86)
-	jump_rect = Rect2(view.x - 208, view.y - 315, 156, 80)
+	action_rect = Rect2(view.x - 310, view.y - 195, 258, 100)
+	jump_rect = Rect2(view.x - 252, view.y - 325, 200, 104)
 	reset()
 
 func set_enabled(value: bool) -> void:
@@ -78,7 +79,8 @@ func _input(event: InputEvent) -> void:
 				_update_stick(event.position)
 			elif action_rect.has_point(event.position):
 				if action_available: interact_requested.emit()
-			elif jump_rect.has_point(event.position): jump_requested.emit()
+			elif jump_rect.has_point(event.position):
+				if jump_available: jump_requested.emit()
 			else: return
 		else:
 			if event.index == stick_id:
@@ -103,7 +105,7 @@ func _draw() -> void:
 	draw_arc(stick_center, stick_radius, 0, TAU, 64, Color("b7d8bf99"), 3, true)
 	draw_circle(stick_center + Vector2(movement.x, -movement.y) * stick_radius * 0.65, 39, Color("b7d8bfcc"))
 	_draw_button(action_rect, action_text, Color("f2ba90ef") if action_available else Color("a3b7c477"))
-	_draw_button(jump_rect, "Saltar", Color("b7d8bfdd"))
+	_draw_button(jump_rect, "Saltar", Color("b7d8bfdd") if jump_available else Color("a3b7c455"))
 
 func _draw_button(rect: Rect2, text: String, color: Color) -> void:
 	var style := StyleBoxFlat.new()

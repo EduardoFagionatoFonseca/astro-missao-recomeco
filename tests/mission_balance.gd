@@ -3,11 +3,6 @@ extends RefCounted
 func run(game: Node3D) -> void:
 	assert(is_equal_approx(game.MOVE_SPEED, 3.6 * 1.05))
 	assert(not InputMap.has_action("run"))
-	game.inside = false
-	assert(game._wave_contact(game.camp_normal, 0, game.SOLAR_DURATION))
-	game.inside = true
-	assert(not game._wave_contact(game.camp_normal, 0, game.SOLAR_DURATION))
-	game.inside = false
 	var feedback: Control = game.feedback
 	feedback.set_link(true)
 	game.communications_online = true
@@ -38,6 +33,24 @@ func run(game: Node3D) -> void:
 	assert(events.solar.stream.data != events.vitals.stream.data)
 	assert(events.energy.stream.data != events.disconnect.stream.data)
 	assert(events.solar.volume_db < events.vitals.volume_db)
+	assert(events.collect.stream.data != events.death.stream.data)
+	game.energy_charge = 25
+	game.elapsed = 0
+	game._update_hud(0)
+	var alpha: float = game.power_label.modulate.a
+	game.elapsed = 0.4
+	game._update_hud(0)
+	assert(game.power_label.modulate.a != alpha)
+	game.energy_charge = 100
+	game._update_hud(0)
+	assert(game.power_label.modulate.a == 1)
+	var writer := preload("res://scripts/typewriter.gd").new()
+	writer.begin(feedback.dialogue, "Estamos chegando.")
+	assert(feedback.dialogue.visible_characters == 0)
+	writer.advance(0.04)
+	assert(feedback.dialogue.visible_characters > 0 and feedback.dialogue.visible_characters < 17)
+	writer.advance(1)
+	assert(feedback.dialogue.visible_characters >= 17)
 	game.event_audio.set_muted(true)
 	for event: AudioStreamPlayer in events.values(): assert(event.volume_db == -80)
 	game.event_audio.set_muted(false)

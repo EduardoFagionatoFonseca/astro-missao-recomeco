@@ -1,6 +1,7 @@
 extends Control
 ## Short queued radio messages and a one-time shelter tutorial, timed in game time.
 signal transmission_started
+signal typing_tick
 const AXIOS := "Inteligência artificial AXIOS"
 var active := false
 var link_online := true
@@ -17,6 +18,9 @@ var notice: PanelContainer
 var notice_label: Label
 var wash: ColorRect
 var radio_tween: Tween
+var dialogue_writer := preload("res://scripts/typewriter.gd").new()
+var notice_writer := preload("res://scripts/typewriter.gd").new()
+var notice_tween: Tween
 
 func _ready() -> void:
 	theme = preload("res://scripts/ui_theme.gd").create()
@@ -43,6 +47,8 @@ func _ready() -> void:
 	notice_label = _label("", 32, Color("efb77c"))
 	notice_label.custom_minimum_size.x = 840
 	notice.add_child(notice_label)
+	dialogue_writer.typing_tick.connect(func(): typing_tick.emit())
+	notice_writer.typing_tick.connect(func(): typing_tick.emit())
 	radio.hide()
 	notice.hide()
 	get_viewport().size_changed.connect(_layout)
@@ -87,15 +93,19 @@ func transmit(id: String, text: String, urgent := false, from := "TRIPULAÇÃO",
 	else: queue.append(entry)
 
 func shelter_tutorial() -> void:
-	notice_message("solar_tutorial", "Entre no abrigo! Radiação a caminho.")
+	notice_message("solar_tutorial", "Névoa solar a caminho. Entre no abrigo!")
 
 func notice_message(id: String, text: String, requires_link := true) -> void:
 	if requires_link and not link_online: return
 	if seen.has(id): return
 	seen[id] = true
-	notice_label.text = text
+	notice_writer.begin(notice_label, text)
 	notice_requires_link = requires_link
 	notice_time = 6.0
+	if notice_tween: notice_tween.kill()
+	notice.modulate.a = 0
+	notice_tween = create_tween()
+	notice_tween.tween_property(notice, "modulate:a", 1.0, 0.2)
 
 func set_link(online: bool) -> void:
 	link_online = online
@@ -103,32 +113,42 @@ func set_link(online: bool) -> void:
 	queue = queue.filter(func(entry: Dictionary): return not entry.requires_link)
 	if current_requires_link:
 		current_time = 0
+		dialogue_writer.cancel()
 		radio.hide()
 	if notice_requires_link:
 		notice_time = 0
+		notice_writer.cancel()
 		notice.hide()
 
 func tick(delta: float) -> void:
+	# Wrapped labels initially measure before the panel receives its final width.
+	# Refit after layout so a short message never leaves an oversized empty panel.
+	radio.reset_size()
+	notice.reset_size()
 	radio.visible = active and current_time > 0
 	notice.visible = active and notice_time > 0
 	if not active: return
 	if current_time <= 0 and not queue.is_empty():
 		var entry: Dictionary = queue.pop_front()
-		dialogue.text = entry.text
+		dialogue_writer.begin(dialogue, entry.text)
 		speaker.text = entry.speaker
 		current_requires_link = entry.requires_link
 		current_time = 4.5
 		radio.show()
 		if radio_tween: radio_tween.kill()
 		radio.modulate.a = 0
+		radio.position.y = get_viewport_rect().size.y - 262
 		radio_tween = create_tween()
-		radio_tween.tween_property(radio, "modulate:a", 1.0, 0.25)
+		radio_tween.set_parallel(true)
+		radio_tween.tween_property(radio, "modulate:a", 1.0, 0.22)
+		radio_tween.tween_property(radio, "position:y", get_viewport_rect().size.y - 270, 0.22).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 		transmission_started.emit()
+	if current_time > 0: dialogue_writer.advance(delta)
+	if notice_time > 0: notice_writer.advance(delta)
 	current_time = maxf(0, current_time - delta)
 	notice_time = maxf(0, notice_time - delta)
 	if current_time < 0.6: radio.modulate.a = current_time / 0.6
 	if notice_time < 0.8: notice.modulate.a = notice_time / 0.8
-	else: notice.modulate.a = 1
 
 func solar_intensity(value: float, sheltered: bool) -> void:
 	wash.color.a = value * 0.18 if not sheltered else 0.0

@@ -21,6 +21,7 @@
   <script src="$GODOT_URL"></script>
   <script>
     const config = $GODOT_CONFIG;
+    if (new URLSearchParams(location.search).has('qa')) config.args.push('--', '--web-test');
     // Resize to the safe-area container rather than drawing under a phone notch.
     config.canvasResizePolicy = 0;
     const canvas = document.getElementById('canvas');

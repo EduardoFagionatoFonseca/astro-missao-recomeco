@@ -16,3 +16,9 @@ python tools/generate_intro.py --ffmpeg /caminho/ffmpeg
 ```
 
 O gerador também grava `docs/intro-storyboard.png`. Não é necessário regenerar para jogar ou exportar.
+
+## Decolagem
+
+`assets/cinematics/outro.ogv`: vídeo original de 14 segundos, 960×540 a 24 fps, no mesmo estilo ilustrado da abertura. Mostra ignição, subida e Marte ficando para trás, com trilha sintetizada e ruído de motor originais. Não utiliza mídia externa. Gere com `python tools/generate_outro.py --ffmpeg /caminho/ffmpeg`.
+
+Embarcar congela a partida e inicia o vídeo. Finalizar ou pular abre a tela de vitória, uma única vez. As opções de pular são iguais às da introdução. O guia inicial tem duas páginas; apenas **Começar**, na segunda, inicia recursos e eventos.

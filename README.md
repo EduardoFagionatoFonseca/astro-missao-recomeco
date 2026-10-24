@@ -7,24 +7,28 @@ Uma miniaventura cozy 3D no Godot 4.7.2. Isolado em Marte, explore o planeta, ma
 No Windows, abra **Jogar.cmd**. O iniciador usa o Godot instalado na pasta Downloads deste computador, no PATH ou na variável `GODOT_EXE`. Para editar, importe `project.godot` no Godot 4.7 e pressione F5. Não há dependências de rede ou plugins.
 
 - WASD ou setas: caminhar por toda a superfície esférica.
-- Espaço: saltitar. Movimento em velocidade fixa de 3,78 m/s; não há corrida.
+- Espaço: saltar sobre bordas e subir plataformas baixas. Movimento em velocidade fixa de 3,78 m/s; não há corrida.
 - E: recolher, entrar/sair da base, usar os painéis ou embarcar na nave.
 - E na estufa: consumir uma refeição e reabastecer alimentos.
-- Esc: fechar minigame ou pausar. Botão Som: silenciar música e efeitos.
+- Esc: fechar configurações/minigame ou pausar. Botão Som: ajustar volumes.
 - Celular: joystick e botões aparecem automaticamente; jogue na horizontal. A orientação vertical suspende a partida.
 
-Iniciar apresenta um vídeo original de 22 segundos com trilha e legendas. Pular, Espaço, Enter ou Esc abrem o guia da missão. O guia ocupa cerca de 70% da tela e mantém recursos e eventos suspensos até confirmar **ENTENDI / EXPLORAR**. Reiniciar após derrota não repete o vídeo na mesma sessão.
+O menu abre com arte marciana 2D e composição central, **Começar** centralizado e uma engrenagem. Botões maiores facilitam o toque. A capa anterior permanece em `assets/ui/menu-mars.png`; a atual é `assets/ui/menu-mars-2d.png`. As configurações oferecem volumes independentes de geral, músicas, interações e avisos, salvos entre sessões. Space Galaxy toca na exploração/menu; Space Ship toca dentro da base, com transição suave.
+
+Começar apresenta um vídeo original de 22 segundos com trilha e legendas. Pular, Espaço, Enter ou Esc abrem o guia da missão. O guia ocupa cerca de 70% da tela e tem duas páginas: **Próximo** e **Começar**. Recursos e eventos ficam suspensos até Começar. Reiniciar após derrota retorna ao menu e não repete o vídeo na mesma sessão. Embarcar inicia uma cutscene de decolagem de 14 segundos, também pulável, antes da tela de vitória.
 
 ## Um passeio completo
 
-Reúna 6 pedras, 6 peças para a antena e 6 galões de combustível para abastecer o resgate. Os itens estão espalhados por toda a esfera, inclusive no outro hemisfério. Cartões animados mostram interações próximas. A nave só chega quando todos os materiais estão reunidos **e a conexão de rádio está ativa**. Aproxime-se e pressione E para embarcar. A câmera mais afastada deixa mais espaço em volta do planeta.
+Primeiro, apenas as **6 peças de antena** estão disponíveis. Reúna-as e ative a transmissão no terminal da base para localizar **5 pedras e 8 galões de combustível**. Se a comunicação cair, os recursos restantes ficam invisíveis e não podem ser coletados até restaurar a conexão; o inventário permanece intacto. Os itens estão espalhados por toda a esfera, inclusive no outro hemisfério. Cartões animados mostram interações próximas. A nave só chega quando todos os materiais estão reunidos **e a conexão de rádio está ativa**. Aproxime-se e pressione E para embarcar.
 
 Dentro do raio de recuperação de oxigênio, use **Entrar na base**. O interior tem circulação livre, colisão com móveis, painel de energia e terminal de comunicação. A saída preserva sua posição externa e os itens coletados.
+
+A superfície tem crateras rasas, relevos suaves e plataformas de 0,38–0,44 m. A borda das plataformas bloqueia a caminhada; pule para subir, pouse no topo e caminhe para fora para cair de volta à superfície. Uma peça de antena fica na plataforma de prática perto da base. A altura também conta para alcançar itens. No celular, segure o joystick com um dedo e toque **Saltar** com outro. Diagonais têm velocidade normalizada; soltar, perder foco ou girar a tela cancela o movimento. Dentro da base, o botão de salto fica inativo.
 
 - **Energia:** conecte três cabos com letras iguais. O reparo restaura 100% e reinicia o ciclo de **63,75 segundos**. Em 30%, já é possível reparar preventivamente. **Sem energia, a produção de O₂ para**, inclusive dentro da base, e a reserva do traje continua caindo. A partida começa com energia ativa.
 - **Comunicação:** o rádio de avisos começa ativo e cai após **85 segundos**. Para restaurar a antena e enviar a posição ao resgate, reúna seis peças e sobreponha as ondas por três segundos. Cada queda muda a sintonia. Depois de chamar a nave, não há novas quedas durante a aproximação.
 
-Dentro da base, o O₂ se recupera **se houver energia** e não há dano solar; o alimento continua sendo consumido. A janela fica iluminada durante o aviso e a onda, apagando quando é seguro sair. A onda e a aproximação da nave continuam enquanto você está no interior. **Nos minigames, recursos e temporizadores ficam suspensos.**
+Dentro da base, o O₂ se recupera **se houver energia** e não há dano solar; o alimento continua sendo consumido. A janela fica iluminada durante o aviso e a névoa, apagando quando é seguro sair. A radiação e a aproximação da nave continuam enquanto você está no interior. **Nos minigames, recursos e temporizadores ficam suspensos.**
 
 As mensagens da tripulação se limitam ao início, confirmação do sinal e pouso. **Inteligência artificial AXIOS** avisa sobre energia em 30%, a primeira pane e radiação prevista. Sem comunicação, os avisos ligados à antena são descartados, inclusive os já abertos; o primeiro diagnóstico local de desconexão apenas explica que os avisos foram suspensos. A janela e os indicadores físicos continuam funcionando sem rádio.
 
@@ -32,9 +36,9 @@ Oxigênio e alimento exigem viagens de reabastecimento: a base com energia repõ
 
 As reservas aumentaram 5%: O₂ dura cerca de **31 segundos** e comida cerca de **58 segundos**. Internamente vão até 105 unidades; a interface continua mostrando 100% quando cheias. Barras ficam vermelhas e pulsam quando baixas. Depois de zerar, há dois segundos de tolerância. Pausar congela os prazos. A base energizada repõe O₂ em aproximadamente 4,2 segundos.
 
-Após 100 segundos, o céu clareia durante dez segundos de aviso, seguidos de uma onda de dez segundos. A antena conectada antecipa a previsão em 20 segundos e mostra a primeira instrução de abrigo. O aviso físico do céu e a janela funcionam mesmo sem rádio. Um único eco baixo acompanha o aviso. **Só o interior protege**. Tocar a onda retira 35 de O₂ e 12 de alimento uma vez por onda.
+Após 100 segundos, o céu clareia durante dez segundos de aviso, seguidos de uma névoa que cobre o planeta inteiro por 12 segundos. A antena conectada antecipa a previsão em 20 segundos e mostra a primeira instrução de abrigo. O aviso físico do céu e a janela funcionam mesmo sem rádio. Um único eco baixo acompanha o aviso. **Só o interior protege**. Três segundos de exposição contínua causam derrota; entrar no abrigo zera a exposição. A borda da tela indica o perigo crescente.
 
-O₂ e alimento ficam progressivamente vermelhos e pulsam suavemente quando baixos. Um aviso de dois tons, diferente do sol, soa em 25% e 12%; na faixa crítica, pode repetir a cada oito segundos. Energia e desconexão têm sons próprios. Todos os efeitos são sintetizados originalmente, sem gravações externas.
+O₂ e alimento ficam progressivamente vermelhos e pulsam suavemente quando baixos. Energia também pulsa em vermelho aos 30% ou menos. Um aviso de dois tons, diferente do sol, soa em 25% e 12%; na faixa crítica, pode repetir a cada oito segundos. Energia e desconexão têm sons próprios. Mensagens aparecem a 70 caracteres por segundo com digitação discreta. Coletas tocam notas ascendentes; derrota toca um acorde descendente. Os efeitos são sintetizados originalmente; as duas músicas de ambiente foram fornecidas pelo usuário e estão identificadas em [assets/audio/README.md](assets/audio/README.md). A arte do menu e seu prompt estão em [docs/MENU_ART.md](docs/MENU_ART.md).
 
 Os três objetivos mostram miniaturas dos próprios modelos, renderizadas uma vez em viewports independentes. Um tema compartilhado personaliza painéis, botões, barras e sliders com slots escuros, bordas retas e fontes maiores; não usa a aparência padrão dos controles. Os textos de jogo foram reduzidos e as primeiras falhas ensinam suas regras em contexto.
 

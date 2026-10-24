@@ -6,9 +6,9 @@ Base: main `f9259e0`. Ambiente: Windows, Godot 4.7.2, Chrome. Capturas geradas p
 
 `godot --headless --path . -- --smoke-test` passou sem erros:
 
-- Suíte original: mundo, orientação, sobrevivência, recuperação, morte, onda solar, coleta e pouso.
+- Suíte original: mundo, orientação, sobrevivência, recuperação, morte, névoa solar, coleta e pouso.
 - Coletar tudo não cria nave sem transmissão.
-- Dois dedos independentes para joystick/corrida e limpeza da entrada.
+- Dois dedos independentes para joystick/ação e limpeza da entrada.
 - Limites da sala, bloqueio de móveis, estações e posição externa preservada.
 - Conexão errada não avança; três corretas restauram energia.
 - Sinal bloqueado sem energia/seis peças; três segundos de estabilidade, perda de estabilidade e pausa.
@@ -28,6 +28,16 @@ Capturas adicionais: `briefing-preview.png`, `window-preview.png` e `web-*-brief
 Importação e exportação Web concluídas sem erros. `tests/web_smoke.cjs` abre o export local, inicia/pula o vídeo, entra na base, percorre o interior com teclado e exercita o joystick com toque emulado. Registra erros de console/página e capturas para inspeção. Como a interface é canvas, os testes usam coordenadas; confira as capturas junto ao console.
 
 ## Evidências e limites
+
+Correção de áudio e salto: `tests/terrain_mobile.gd` verifica bloqueio lateral das plataformas, salto com joystick e segundo dedo, pouso, queda ao sair da borda, alcance vertical de coleta, profundidade das crateras, oito direções com velocidade normalizada e cancelamento ao perder foco. Malha e movimentação consultam o mesmo campo de altura em `scripts/planet_terrain.gd`.
+
+`tests/web_audio_mobile.cjs` usa Chrome com Pixel 7 emulado, sem flag para liberar autoplay. Mede amostras na saída Web Audio em menu/vídeo/exploração/base, verifica silêncio/retorno pelo volume geral e exercita oito direções, diagonais, soltura, salto em movimento com dois dedos, pouso sobre a plataforma, entrada e movimento no abrigo e cancelamento do joystick em orientação vertical. A execução terminou sem erros. Capturas: `web-mobile-jump.png`, `web-mobile-platform.png`, `web-mobile-audio-base.png`. O parâmetro local `?qa=1` habilita apenas a telemetria usada pelo teste; a partida normal não publica esse estado.
+
+O menu 2D centralizado e seus botões maiores foram inspecionados em desktop e paisagem de celular emulado. A arte anterior continua preservada. O defeito de áudio foi reproduzido medindo saída zero apesar dos players ativos; após a correção Stream, a saída deixou de ser zero. Isso complementa os testes antigos, que verificavam estado e console mas não o sinal de áudio.
+
+Menu e descoberta: `tests/radio_resources.gd` verifica 6 peças de antena antes da transmissão, 5 pedras/8 combustíveis depois dela, bloqueio de coleta sem sinal, itens ocultos após transição interior/exterior e preservação do inventário. Também cobre volumes independentes, zero silencioso, suspensão da simulação nas configurações e troca entre os dois MP3 em loop. O teste web abre a engrenagem, ajusta música e percorre o início em desktop/toque. No desktop, recarrega a página e confere visualmente o ganho preservado em `web-desktop-settings-restored.png`. `menu-preview.png` e `settings-preview.png` mostram a nova interface; a origem e o prompt da arte estão em `MENU_ART.md`.
+
+A atualização de decolagem cobre névoa planetária de 12 s, morte após 3 s de exposição contínua, proteção e reinício da exposição dentro do abrigo, pulso de energia baixa, sons distintos de coleta/derrota e escrita progressiva. A automação percorre as duas páginas do guia com a simulação congelada e verifica vídeo final antes da tela de vitória. Capturas `solar-preview.png`, `briefing2-preview.png`, `outro-preview.png` e `outro-storyboard.png` registram os novos visuais. O teste web percorre ambos os slides em desktop e toque emulado.
 
 Capturas `web-desktop-*.png` e `web-mobile-*.png` documentam menu, vídeo, exploração, base, painel e movimento. `intro-storyboard.png` mostra um quadro da cutscene.
 

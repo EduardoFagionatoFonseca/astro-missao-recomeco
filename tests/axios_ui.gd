@@ -57,7 +57,12 @@ func run(game: Node3D) -> void:
 	var view: Vector2 = game.get_viewport().get_visible_rect().size
 	assert(is_equal_approx(game.intro.panel.size.x * game.intro.panel.size.y / (view.x * view.y), 0.7056))
 	assert(game.material_icons.size() == 3)
-	game._start_game()
+	assert(game.intro.page_index == 0)
+	game.intro._next()
+	assert(game.intro.page_index == 1 and not game.playing)
+	game._process(4)
+	assert(before == [game.oxygen, game.food, game.energy_clock, game.signal_clock, game.solar_clock])
+	game.intro._next()
 	assert(game.playing and not game.intro.visible)
 	game.communications_online = true
 	feedback.set_link(true)
