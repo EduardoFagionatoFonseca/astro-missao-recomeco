@@ -7,15 +7,15 @@ Uma miniaventura cozy 3D no Godot 4.7.2. Isolado em Marte, explore o planeta, ma
 No Windows, abra **Jogar.cmd**. O iniciador usa o Godot instalado na pasta Downloads deste computador, no PATH ou na variável `GODOT_EXE`. Para editar, importe `project.godot` no Godot 4.7 e pressione F5. Não há dependências de rede ou plugins.
 
 - WASD ou setas: caminhar por toda a superfície esférica.
-- Espaço: saltar sobre bordas e subir plataformas baixas. Movimento em velocidade fixa de 3,78 m/s; não há corrida.
+- Espaço: saltar sobre bordas e subir plataformas baixas. Movimento em velocidade fixa de 3,8934 m/s (+3%); não há corrida.
 - E: recolher, entrar/sair da base, usar os painéis ou embarcar na nave.
 - E na estufa: consumir uma refeição e reabastecer alimentos.
-- Esc: fechar configurações/minigame ou pausar. Botão Som: ajustar volumes.
+- Esc: fechar configurações ou minigame. A partida não tem pausa. Botão Som: ajustar volumes.
 - Celular: joystick e botões aparecem automaticamente; jogue na horizontal. A orientação vertical suspende a partida.
 
-O menu abre com arte marciana 2D e composição central, **Começar** centralizado e uma engrenagem. Botões maiores facilitam o toque. A capa anterior permanece em `assets/ui/menu-mars.png`; a atual é `assets/ui/menu-mars-2d.png`. As configurações oferecem volumes independentes de geral, músicas, interações e avisos, salvos entre sessões. Space Galaxy toca na exploração/menu; Space Ship toca dentro da base, com transição suave.
+O menu abre com arte marciana 2D e composição central, **Começar** em bege alaranjado e uma engrenagem, sem painel ou frase ao redor dos botões. A capa anterior permanece em `assets/ui/menu-mars.png`; a atual é `assets/ui/menu-mars-2d.png`. As configurações oferecem volumes independentes de geral, músicas, interações e avisos, salvos entre sessões. Space Galaxy toca na exploração/menu; Space Ship toca dentro da base, com transição suave. O ganho da música externa foi reduzido em cerca de 6 dB, e o da base em cerca de 2,4 dB; durante a radiação há redução adicional para destacar o ambiente sonoro.
 
-Começar apresenta um vídeo original de 22 segundos com trilha e legendas. Pular, Espaço, Enter ou Esc abrem o guia da missão. O guia ocupa cerca de 70% da tela e tem duas páginas: **Próximo** e **Começar**. Recursos e eventos ficam suspensos até Começar. Reiniciar após derrota retorna ao menu e não repete o vídeo na mesma sessão. Embarcar inicia uma cutscene de decolagem de 14 segundos, também pulável, antes da tela de vitória.
+Começar apresenta um vídeo original de 22 segundos com trilha e legendas. Pular, Espaço, Enter ou Esc abrem o guia da missão. O guia ocupa cerca de 70% da tela e tem duas páginas: **Próximo** e **Começar**. Recursos e eventos ficam suspensos até Começar. Reiniciar após derrota retorna ao menu e não repete o vídeo na mesma sessão. Embarcar inicia uma cutscene de decolagem de 14 segundos, também pulável; ao terminar ou pular, o jogo retorna automaticamente ao menu principal, pronto para uma nova missão.
 
 ## Um passeio completo
 
@@ -26,17 +26,17 @@ Dentro do raio de recuperação de oxigênio, use **Entrar na base**. O interior
 A superfície tem crateras rasas, relevos suaves e plataformas de 0,38–0,44 m. A borda das plataformas bloqueia a caminhada; pule para subir, pouse no topo e caminhe para fora para cair de volta à superfície. Uma peça de antena fica na plataforma de prática perto da base. A altura também conta para alcançar itens. No celular, segure o joystick com um dedo e toque **Saltar** com outro. Diagonais têm velocidade normalizada; soltar, perder foco ou girar a tela cancela o movimento. Dentro da base, o botão de salto fica inativo.
 
 - **Energia:** conecte três cabos com letras iguais. O reparo restaura 100% e reinicia o ciclo de **63,75 segundos**. Em 30%, já é possível reparar preventivamente. **Sem energia, a produção de O₂ para**, inclusive dentro da base, e a reserva do traje continua caindo. A partida começa com energia ativa.
-- **Comunicação:** o rádio de avisos começa ativo e cai após **85 segundos**. Para restaurar a antena e enviar a posição ao resgate, reúna seis peças e sobreponha as ondas por três segundos. Cada queda muda a sintonia. Depois de chamar a nave, não há novas quedas durante a aproximação.
+- **Comunicação:** o rádio de avisos começa ativo e cai após **85 segundos**. Para restaurar a antena e enviar a posição ao resgate, reúna seis peças e sobreponha as ondas por três segundos. O painel fecha sozinho ao concluir, e a estação fica sem interação enquanto o sinal permanecer estabilizado. Uma nova queda reabilita a tarefa e muda a sintonia. Depois de chamar a nave, não há novas quedas durante a aproximação.
 
-Dentro da base, o O₂ se recupera **se houver energia** e não há dano solar; o alimento continua sendo consumido. A janela fica iluminada durante o aviso e a névoa, apagando quando é seguro sair. A radiação e a aproximação da nave continuam enquanto você está no interior. **Nos minigames, recursos e temporizadores ficam suspensos.**
+Dentro da base, o O₂ se recupera **se houver energia** e não há dano solar; o alimento continua sendo consumido. A janela fica iluminada durante o aviso e a névoa, apagando quando é seguro sair. **A sobrevivência continua durante minigames, configurações e orientação vertical**; apenas os controles ficam indisponíveis. Falta de energia interrompe a sintonia da antena. O guia anterior ao início continua sem consumir recursos.
 
 As mensagens da tripulação se limitam ao início, confirmação do sinal e pouso. **Inteligência artificial AXIOS** avisa sobre energia em 30%, a primeira pane e radiação prevista. Sem comunicação, os avisos ligados à antena são descartados, inclusive os já abertos; o primeiro diagnóstico local de desconexão apenas explica que os avisos foram suspensos. A janela e os indicadores físicos continuam funcionando sem rádio.
 
 Oxigênio e alimento exigem viagens de reabastecimento: a base com energia repõe O₂; a estufa oferece refeições com E e não protege da radiação. A derrota encerra a expedição e exige recomeçar do zero.
 
-As reservas aumentaram 5%: O₂ dura cerca de **31 segundos** e comida cerca de **58 segundos**. Internamente vão até 105 unidades; a interface continua mostrando 100% quando cheias. Barras ficam vermelhas e pulsam quando baixas. Depois de zerar, há dois segundos de tolerância. Pausar congela os prazos. A base energizada repõe O₂ em aproximadamente 4,2 segundos.
+As reservas aumentaram 5%: O₂ dura cerca de **31 segundos** e comida cerca de **58 segundos**. Internamente vão até 105 unidades; a interface continua mostrando 100% quando cheias. Barras ficam vermelhas e pulsam quando baixas; avisos locais na tela aparecem em 25% e 12%, mesmo sem rádio, e voltam a funcionar após reabastecer. A partir de 12%, contagens regressivas mostram o tempo restante até a derrota por fome ou falta de O₂, incluindo os dois segundos de tolerância após zerar. A recuperação de O₂ no abrigo energizado remove sua contagem; reabastecer a comida remove a de fome.
 
-Após 100 segundos, o céu clareia durante dez segundos de aviso, seguidos de uma névoa que cobre o planeta inteiro por 12 segundos. A antena conectada antecipa a previsão em 20 segundos e mostra a primeira instrução de abrigo. O aviso físico do céu e a janela funcionam mesmo sem rádio. Um único eco baixo acompanha o aviso. **Só o interior protege**. Três segundos de exposição contínua causam derrota; entrar no abrigo zera a exposição. A borda da tela indica o perigo crescente.
+Após 100 segundos, o céu clareia durante dez segundos de aviso, seguidos de uma névoa que cobre o planeta inteiro por 12 segundos. A antena conectada avisa pelo rádio somente **5 segundos antes da névoa**, com prioridade sobre transmissões em andamento. Uma explosão com eco marca o início da radiação, seguida de ruído contínuo até o fim, também audível dentro do abrigo. O Sol visual é maior e fica a 180 unidades do centro do planeta; a lua ficou 25% menor. **Só o interior protege**. Cinco segundos de exposição contínua causam derrota; entrar no abrigo zera a exposição. Uma contagem mostra a resistência restante. Fora dele, a imagem recebe desfoque sutil e bordas alaranjadas que avançam com a exposição, preservando a nitidez da interface.
 
 O₂ e alimento ficam progressivamente vermelhos e pulsam suavemente quando baixos. Energia também pulsa em vermelho aos 30% ou menos. Um aviso de dois tons, diferente do sol, soa em 25% e 12%; na faixa crítica, pode repetir a cada oito segundos. Energia e desconexão têm sons próprios. Mensagens aparecem a 70 caracteres por segundo com digitação discreta. Coletas tocam notas ascendentes; derrota toca um acorde descendente. Os efeitos são sintetizados originalmente; as duas músicas de ambiente foram fornecidas pelo usuário e estão identificadas em [assets/audio/README.md](assets/audio/README.md). A arte do menu e seu prompt estão em [docs/MENU_ART.md](docs/MENU_ART.md).
 
@@ -50,7 +50,7 @@ O preset Web usa exportação sem threads e uma página que respeita recortes de
 
 ## Arte e áudio
 
-Modelos **Kenney Space Kit 2.0 (CC0)** reutilizados do Last Light conforme solicitado. Licença em `assets/space/License.txt`, origem em https://kenney.nl/assets/space-kit e proveniência em `docs/ASSETS.md`. O planeta, acampamento, nave, iluminação e interface são montados no projeto. Trilha ambiente espacial original: acordes longos com timbre de órgão, drone grave e camadas aéreas. Sons de coleta, ecos solares e alertas também são sintetizados localmente, sem gravações ou músicas de terceiros. Veja `docs/AUDIO.md`.
+Modelos **Kenney Space Kit 2.0 (CC0)** reutilizados do Last Light conforme solicitado. Licença em `assets/space/License.txt`, origem em https://kenney.nl/assets/space-kit e proveniência em `docs/ASSETS.md`. O planeta, acampamento, nave, iluminação e interface são montados no projeto. As duas trilhas de ambiente foram fornecidas pelo usuário; coleta, explosão, ruído solar e alertas são sintetizados localmente. Veja `docs/AUDIO.md`.
 
 ## Verificação
 

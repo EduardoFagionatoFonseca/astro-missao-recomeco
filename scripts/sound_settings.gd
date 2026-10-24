@@ -2,6 +2,9 @@ extends Control
 signal visibility_updated
 const BUSES := ["Master", "Music", "Interactions", "Alerts"]
 const NAMES := ["GERAL", "MÚSICAS", "INTERAÇÕES", "AVISOS"]
+const MUSIC_MAX_GAIN := 0.8
+const MUSIC_SCALE_VERSION := 2
+var volumes: Dictionary = {}
 var sliders: Array[HSlider] = []
 var values: Array[Label] = []
 var panel: PanelContainer
@@ -11,12 +14,16 @@ func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var config := ConfigFile.new()
 	config.load("user://audio.cfg")
+	var migrate_music := int(config.get_value("settings", "music_scale_version", 0)) < MUSIC_SCALE_VERSION
 	for bus in BUSES:
 		if AudioServer.get_bus_index(bus) < 0:
 			AudioServer.add_bus()
 			AudioServer.set_bus_name(AudioServer.bus_count - 1, bus)
 			AudioServer.set_bus_send(AudioServer.bus_count - 1, "Master")
-		_set_volume(bus, float(config.get_value("volume", bus, 0.8 if bus == "Music" else 1.0)), false)
+		var value := float(config.get_value("volume", bus, 0.5 if bus == "Music" else 1.0))
+		if bus == "Music" and migrate_music: value = 0.5
+		_set_volume(bus, value, false)
+	if migrate_music: _save_volumes()
 	var shade := ColorRect.new()
 	shade.color = Color("05090de8")
 	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -41,7 +48,7 @@ func _ready() -> void:
 		slider.max_value = 100
 		slider.step = 1
 		slider.custom_minimum_size = Vector2(840, 44)
-		slider.value = roundf(AudioServer.get_bus_volume_linear(AudioServer.get_bus_index(BUSES[i])) * 100)
+		slider.value = roundf(float(volumes[BUSES[i]]) * 100)
 		values[i].text = "%d%%" % slider.value
 		slider.value_changed.connect(func(value: float): _set_volume(BUSES[i], value / 100); values[i].text = "%d%%" % value)
 		sliders.append(slider)
@@ -65,12 +72,15 @@ func _label(parent: Node, text: String, size: int, color := Color("f2f1e9")) -> 
 	return label
 
 func _set_volume(bus: String, value: float, save := true) -> void:
-	AudioServer.set_bus_volume_linear(AudioServer.get_bus_index(bus), clampf(value, 0, 1))
-	if save:
-		var config := ConfigFile.new()
-		for name in BUSES:
-			config.set_value("volume", name, AudioServer.get_bus_volume_linear(AudioServer.get_bus_index(name)))
-		config.save("user://audio.cfg")
+	volumes[bus] = clampf(value, 0, 1)
+	AudioServer.set_bus_volume_linear(AudioServer.get_bus_index(bus), float(volumes[bus]) * (MUSIC_MAX_GAIN if bus == "Music" else 1.0))
+	if save: _save_volumes()
+
+func _save_volumes() -> void:
+	var config := ConfigFile.new()
+	for name in BUSES: config.set_value("volume", name, volumes[name])
+	config.set_value("settings", "music_scale_version", MUSIC_SCALE_VERSION)
+	config.save("user://audio.cfg")
 
 func open() -> void:
 	show()

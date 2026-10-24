@@ -1,7 +1,7 @@
 extends Node
 ## Original event sounds. Separate channels keep life support distinct from solar weather.
 const RATE := 22050
-const LEVELS := {"solar": -20.0, "fog": -23.0, "vitals": -8.0, "energy": -12.0, "disconnect": -11.0, "radio": -19.0, "typing": -25.0, "collect": -8.0, "death": -9.0}
+const LEVELS := {"solar": -13.0, "fog": -17.0, "vitals": -8.0, "energy": -12.0, "disconnect": -11.0, "radio": -19.0, "typing": -25.0, "collect": -8.0, "death": -9.0}
 var players: Dictionary = {}
 var muted := false
 
@@ -43,13 +43,17 @@ func _synthesize(kind: String) -> AudioStreamWAV:
 		low = low * 0.92 + noise * 0.08
 		var sample := 0.0
 		match kind:
-			"solar", "fog":
+			"solar":
 				# Distant explosion: low thump, filtered dust and three fading echoes.
 				for echo in range(4):
 					var age := t - echo * 0.44
 					if age < 0: continue
 					var envelope := (1.0 - exp(-age * 35)) * exp(-age * 3.0) * pow(0.48, echo)
 					sample += (sin(TAU * (48 * age + 10 * (1 - exp(-age * 5)))) * 0.42 + low * 1.1) * envelope
+			"fog":
+				# Sustained filtered hiss with a short edge fade for a click-free loop.
+				var edge := minf(1, minf(t * 80, (seconds - t) * 80))
+				sample = (low * 0.75 + noise * 0.035 + sin(TAU * 50 * t) * 0.025) * edge
 			"vitals":
 				var phase := fmod(t, 0.34)
 				if phase < 0.18:
@@ -84,4 +88,7 @@ func _synthesize(kind: String) -> AudioStreamWAV:
 	stream.format = AudioStreamWAV.FORMAT_16_BITS
 	stream.mix_rate = RATE
 	stream.data = data
+	if kind == "fog":
+		stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
+		stream.loop_end = data.size() / 2
 	return stream

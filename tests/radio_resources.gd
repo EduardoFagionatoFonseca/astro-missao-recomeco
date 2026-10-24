@@ -39,7 +39,7 @@ func run(game: Node3D) -> void:
 	game._on_power_repaired()
 	game._on_signal_sent()
 	assert(not game.items[rock].node.visible and game.items[fuel].node.visible)
-	# Settings suspend gameplay and keep independent gains, including silent zero.
+	# Settings keep independent gains but do not stop survival.
 	var before := [game.oxygen, game.food, game.solar_clock, game.energy_clock, game.signal_clock]
 	var previous: float = game.audio_settings.sliders[2].value
 	game.audio_settings.open()
@@ -47,7 +47,7 @@ func run(game: Node3D) -> void:
 	assert(AudioServer.get_bus_volume_linear(AudioServer.get_bus_index("Interactions")) == 0)
 	assert(AudioServer.get_bus_volume_linear(AudioServer.get_bus_index("Alerts")) > 0)
 	game._process(1)
-	assert(before == [game.oxygen, game.food, game.solar_clock, game.energy_clock, game.signal_clock])
+	assert(game.food < before[1] and game.solar_clock > before[2] and game.energy_clock > before[3])
 	assert(not game.controls.enabled)
 	game.audio_settings.sliders[2].value = previous
 	game.audio_settings.close()
@@ -63,4 +63,4 @@ func run(game: Node3D) -> void:
 	game.normal = game.camp_normal
 	game.oxygen = game.MAX_RESERVE
 	game.food = game.MAX_RESERVE
-	print("PASS: 6 antenna parts unlock 5 rocks/8 fuel, offline items cannot be collected or revived, saved independent audio gains, settings freeze and location music")
+	print("PASS: antenna discovery, offline collection blocked, inventory retained, independent audio gains, settings keep survival running and location music")

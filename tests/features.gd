@@ -36,7 +36,7 @@ func run(game: Node3D) -> void:
 	var previous_food: float = game.food
 	var previous_solar: float = game.solar_clock
 	game._process(10)
-	assert(game.food == previous_food and game.solar_clock == previous_solar)
+	assert(game.food < previous_food and game.solar_clock > previous_solar)
 	puzzle._select_source(0)
 	puzzle._select_target(1)
 	assert(puzzle.connected.count(true) == 0)
@@ -84,4 +84,4 @@ func run(game: Node3D) -> void:
 	load("res://tests/axios_ui.gd").new().run(game)
 	game._update_controls()
 	assert(ResourceLoader.exists("res://assets/cinematics/intro.ogv"))
-	print("PASS: multi-touch, input cancellation, interior bounds/furniture, station proximity, cables, signal locks/stability/pause, power depletion, return position and video asset")
+	print("PASS: multi-touch, input cancellation, interior bounds/furniture, stations, cables, signal stability, survival during puzzles, power depletion, return position and video asset")
