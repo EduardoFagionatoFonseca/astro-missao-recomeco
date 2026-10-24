@@ -177,6 +177,7 @@ func _refresh_connections() -> void:
 	if is_instance_valid(diagram): diagram.queue_redraw()
 
 func open_signal(power: bool, parts: int, sent: bool, revision := 0) -> void:
+	if sent: return
 	_clear()
 	mode = "signal"
 	_text("ANTENA", 32, Color("92bde0"))
@@ -234,6 +235,7 @@ func _process(delta: float) -> void:
 		completed = true
 		message.text = "SINAL RESTAURADO"
 		signal_sent.emit()
+		close()
 
 func close() -> void:
 	hide()

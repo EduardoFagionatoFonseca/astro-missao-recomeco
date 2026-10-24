@@ -84,13 +84,14 @@ func _layout() -> void:
 	radio.position = Vector2((view.x - 900) / 2, view.y - 270)
 	notice.position = Vector2((view.x - 900) / 2, 175)
 
-func transmit(id: String, text: String, urgent := false, from := "TRIPULAÇÃO", requires_link := true) -> void:
+func transmit(id: String, text: String, urgent := false, from := "TRIPULAÇÃO", requires_link := true, interrupt := false) -> void:
 	if requires_link and not link_online: return
 	if seen.has(id): return
 	seen[id] = true
 	var entry := {"text": text, "speaker": from, "requires_link": requires_link}
 	if urgent: queue.push_front(entry)
 	else: queue.append(entry)
+	if interrupt: current_time = 0
 
 func shelter_tutorial() -> void:
 	notice_message("solar_tutorial", "Névoa solar a caminho. Entre no abrigo!")

@@ -46,7 +46,6 @@ var hud: CanvasLayer
 var intro: Control
 var start_menu: Control
 var material_icons: Array[Texture2D] = []
-var ending: PanelContainer
 var counts: Array[Label] = []
 var music: AudioStreamPlayer
 var base_music: AudioStreamPlayer
@@ -127,7 +126,7 @@ var qa_clock := 0.0
 
 func _ready() -> void:
 	rng.seed = 60318
-	auto_check = "--smoke-test" in OS.get_cmdline_user_args()
+	auto_check = "--smoke-test" in OS.get_cmdline_user_args() and not Engine.has_meta("astro_smoke_completed")
 	capture = "--capture" in OS.get_cmdline_user_args() or "--capture-intro" in OS.get_cmdline_user_args() or "--capture-fog" in OS.get_cmdline_user_args() or "--capture-critical" in OS.get_cmdline_user_args() or "--capture-base" in OS.get_cmdline_user_args() or "--capture-power" in OS.get_cmdline_user_args() or "--capture-signal" in OS.get_cmdline_user_args()
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--capture-"): capture = true
@@ -453,6 +452,7 @@ func _process(delta: float) -> void:
 	if auto_check and check_time > 0.4:
 		auto_check = false
 		load("res://tests/features.gd").new().run(self)
+		load("res://tests/mission_flow.gd").new().run(self)
 		load("res://tests/survival_tuning.gd").new().run(self)
 		load("res://tests/terrain_mobile.gd").new().run(self)
 		load("res://tests/radio_resources.gd").new().run(self)
@@ -463,15 +463,13 @@ func _process(delta: float) -> void:
 		assert(ship_landed)
 		normal = ship_normal
 		_interact()
-		assert(won and outro_video.active and not ending.visible)
+		assert(won and outro_video.active and not start_menu.visible)
+		Engine.set_meta("astro_smoke_completed", true)
+		var watcher: Node = load("res://tests/menu_return.gd").new()
+		get_tree().root.add_child(watcher)
+		watcher.watch()
 		outro_video._finish()
-		assert(ending.visible)
-		print("PASS: spherical placement, collection, rescue landing, boarding and completion")
-		# Let pending audio buffers and queued UI nodes finish before shutdown.
-		for audio in [sound, music, base_music, alert_audio, fog_audio]: audio.stop()
-		for audio in event_audio.players.values(): audio.stop()
-		await get_tree().create_timer(0.15).timeout
-		get_tree().quit()
+		return
 	_update_controls()
 	feedback.tick(delta)
 	if not playing or won or dead: return
@@ -612,7 +610,7 @@ func _interact() -> void:
 		var station: String = base_room.station_at(avatar.position)
 		if station == "exit": _transition_to(false)
 		elif station == "energy": minigames.open_power(energy_ready and energy_charge > 30)
-		elif station == "signal": minigames.open_signal(energy_ready, found[1], signal_transmitted, signal_failures)
+		elif station == "signal" and not (signal_transmitted and communications_online): minigames.open_signal(energy_ready, found[1], signal_transmitted, signal_failures)
 		_update_controls()
 		return
 	if ship_landed and normal.dot(ship_normal) > 0.975:
@@ -807,10 +805,8 @@ func _build_ui() -> void:
 	vignette = ColorRect.new()
 	vignette.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	vignette.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var edge_shader := Shader.new()
-	edge_shader.code = "shader_type canvas_item; uniform float intensity = 0.0; void fragment(){ vec2 p=(UV-vec2(0.5))*vec2(1.1,1.0); float edge=smoothstep(0.18,0.66,length(p)); COLOR=vec4(0.005,0.008,0.015,edge*intensity); }"
 	vignette_material = ShaderMaterial.new()
-	vignette_material.shader = edge_shader
+	vignette_material.shader = preload("res://scripts/exposure_screen.gdshader")
 	vignette.material = vignette_material
 	hud.add_child(vignette)
 	var root := Control.new()
@@ -881,9 +877,6 @@ func _build_ui() -> void:
 	intro = preload("res://scripts/mission_briefing.gd").new()
 	hud.add_child(intro)
 	intro.accepted.connect(_start_game)
-	ending = _modal("EM CASA.", "Sua tripulação chegou.")
-	ending.get_child(0).add_child(_button("Explorar outra vez  ", func(): get_tree().reload_current_scene()))
-	ending.hide()
 	death_panel = _modal("MISSÃO ENCERRADA", "Cuide das reservas. Tente outra rota.")
 	death_panel.get_child(0).add_child(_button("Recomeçar expedição  ", func(): get_tree().reload_current_scene()))
 	death_panel.hide()
@@ -1000,9 +993,10 @@ func _update_hud(_delta: float) -> void:
 	var grace := clampf(maxf(oxygen_empty_time, food_empty_time) / 2.0, 0, 1)
 	power_label.add_theme_color_override("font_color", Color("ef7777") if energy_charge <= 30 else MINT)
 	power_label.modulate.a = 0.72 + pulse * 0.28 if energy_charge <= 30 else 1.0
-	var intensity := maxf(depleted * 0.65 + grace * 0.3, exposure / EXPOSURE_LIMIT * 0.9)
+	var intensity := depleted * 0.65 + grace * 0.3
 	if dead: intensity = 0.98
 	vignette_material.set_shader_parameter("intensity", intensity)
+	vignette_material.set_shader_parameter("radiation", clampf(exposure / EXPOSURE_LIMIT, 0, 1) if not inside and not dead and solar_phase == "active" else 0.0)
 
 func _finish() -> void:
 	if won: return
@@ -1015,8 +1009,8 @@ func _finish() -> void:
 	_update_controls()
 	outro_video.begin(muted, true)
 
-func _show_ending() -> void:
-	if won: ending.show()
+func _return_to_menu() -> void:
+	if won: get_tree().call_deferred("reload_current_scene")
 
 func _build_audio() -> void:
 	music = AudioStreamPlayer.new()
@@ -1103,7 +1097,7 @@ func _build_expansion() -> void:
 	intro_video.finished.connect(_show_briefing)
 	outro_video = preload("res://scripts/intro_video.gd").new()
 	hud.add_child(outro_video)
-	outro_video.finished.connect(_show_ending)
+	outro_video.finished.connect(_return_to_menu)
 	intro.configure(material_icons, controls.mobile)
 	portrait_hint = PanelContainer.new()
 	portrait_hint.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -1121,7 +1115,7 @@ func _build_expansion() -> void:
 	transition_veil.modulate.a = 0
 	hud.add_child(transition_veil)
 	get_viewport().size_changed.connect(_layout_ui)
-	for modal in [ending, death_panel]:
+	for modal in [death_panel]:
 		modal.resized.connect(_center_modal.bind(modal))
 	_layout_ui()
 	_update_controls()
@@ -1132,7 +1126,7 @@ func _layout_ui() -> void:
 	mute_ui.position = Vector2(view.x - 138, 160)
 	mute_ui.custom_minimum_size = Vector2(100, 72)
 	prompt.position = Vector2((view.x - 450) / 2, view.y - 112)
-	for modal in [ending, death_panel]: _center_modal(modal)
+	for modal in [death_panel]: _center_modal(modal)
 	portrait_hint.visible = controls.mobile and view.y > view.x
 	controls.reset()
 	_update_controls()
@@ -1172,6 +1166,7 @@ func _update_prompt() -> void:
 	var text := ""
 	if inside:
 		target = base_room.station_at(avatar.position)
+		if target == "signal" and signal_transmitted and communications_online: target = ""
 		text = {"energy": "ENERGIA", "signal": "ANTENA", "exit": "SAIR", "": ""}[target]
 	elif ship_landed and normal.dot(ship_normal) > 0.975:
 		target = "board"
@@ -1270,10 +1265,9 @@ func _update_indoor_movement(delta: float) -> void:
 
 func _update_solar_notices() -> void:
 	if not communications_online: return
-	if solar_phase == "calm" and solar_clock >= SOLAR_INTERVAL - 20:
-		feedback.transmit("solar_early_%d" % solar_cycle, "Radiação em breve. Prepare o abrigo.", true, feedback.AXIOS)
-	elif solar_phase != "calm" and not inside:
-		feedback.shelter_tutorial()
+	if solar_phase == "warning" and solar_clock >= SOLAR_WARNING - 4:
+		var seconds := ceili(SOLAR_WARNING - solar_clock)
+		feedback.transmit("solar_warning_%d" % solar_cycle, "Radiação em %d s. Entre no abrigo." % seconds, true, feedback.AXIOS, true, true)
 
 func _update_energy(delta: float) -> void:
 	if energy_ready:
@@ -1317,7 +1311,6 @@ func _on_signal_sent() -> void:
 	_chime(880)
 	if signal_transmitted: feedback.transmit("signal", "Sinal recebido. Recursos localizados.")
 	_sync_resource_visibility()
-	if solar_phase != "calm" and not inside: feedback.shelter_tutorial()
 	_try_rescue()
 	_update_controls()
 
