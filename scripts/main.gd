@@ -2,7 +2,8 @@ extends Node3D
 ## A gentle exploration game on a complete spherical world.
 
 const R := 12.0
-const TOTAL := 18
+const GOALS := [5, 6, 8]
+const TOTAL := 19
 const OXYGEN_RATE := 3.4
 const FOOD_RATE := 1.8
 const SOLAR_WARNING := 10.0
@@ -40,12 +41,15 @@ var ship_timer := -1.0
 var ship_landed := false
 var hud: CanvasLayer
 var intro: Control
-var start_menu: PanelContainer
+var start_menu: Control
 var material_icons: Array[Texture2D] = []
 var ending: PanelContainer
 var pause_panel: PanelContainer
 var counts: Array[Label] = []
 var music: AudioStreamPlayer
+var base_music: AudioStreamPlayer
+var audio_settings: Control
+var music_mix := 0.0
 var sound: AudioStreamPlayer
 var muted := false
 var auto_check := false
@@ -146,7 +150,7 @@ func _ready() -> void:
 	_build_ui()
 	_build_audio()
 	_build_expansion()
-	if auto_check or (capture and not "--capture-intro" in OS.get_cmdline_user_args()):
+	if auto_check or (capture and not "--capture-intro" in OS.get_cmdline_user_args() and not "--capture-menu" in OS.get_cmdline_user_args() and not "--capture-settings" in OS.get_cmdline_user_args()):
 		_start()
 	if "--capture-fog" in OS.get_cmdline_user_args():
 		solar_phase = "active"
@@ -165,7 +169,7 @@ func _ready() -> void:
 		solar_phase = "warning"
 		solar_clock = 7
 		feedback.shelter_tutorial()
-	if Engine.has_meta("astro_intro_seen") and not capture and not auto_check: _start_game()
+	if "--capture-settings" in OS.get_cmdline_user_args(): audio_settings.open()
 	if "--capture-briefing" in OS.get_cmdline_user_args(): _show_briefing()
 	if "--capture-base" in OS.get_cmdline_user_args() or "--capture-power" in OS.get_cmdline_user_args() or "--capture-signal" in OS.get_cmdline_user_args() or "--capture-window" in OS.get_cmdline_user_args():
 		_apply_location(true)
@@ -389,7 +393,7 @@ func _build_items() -> void:
 		if i == 0:
 			n = Vector3(-0.18, 1, -0.2).normalized()
 		var root := _surface(n)
-		var kind := i % 3
+		var kind := 1 if i < GOALS[1] else 0 if i < GOALS[1] + GOALS[0] else 2
 		var visual := Node3D.new()
 		root.add_child(visual)
 		if kind == 0:
@@ -410,9 +414,11 @@ func _build_items() -> void:
 		var marker := _ball(root, 0.065, [PEACH, MINT, Color("dfcc97")][kind], Vector3(0, 1.1, 0))
 		marker.material_override = _material([PEACH, MINT, Color("dfcc97")][kind], 0.5)
 		items.append({"node": root, "normal": n, "visual": visual, "marker": marker, "ring": ring, "kind": kind, "taken": false})
+	_sync_resource_visibility()
 
 func _process(delta: float) -> void:
 	check_time += delta
+	_update_music(delta)
 	if capture and check_time > 2.0:
 		var capture_path := "res://docs/solar-preview.png" if "--capture-fog" in OS.get_cmdline_user_args() else "res://docs/preview.png"
 		if "--capture-critical" in OS.get_cmdline_user_args(): capture_path = "res://docs/critical-preview.png"
@@ -424,18 +430,21 @@ func _process(delta: float) -> void:
 		if "--capture-window" in OS.get_cmdline_user_args(): capture_path = "res://docs/window-preview.png"
 		if "--capture-outro" in OS.get_cmdline_user_args(): capture_path = "res://docs/outro-preview.png"
 		if "--capture-briefing2" in OS.get_cmdline_user_args(): capture_path = "res://docs/briefing2-preview.png"
+		if "--capture-menu" in OS.get_cmdline_user_args(): capture_path = "res://docs/menu-preview.png"
+		if "--capture-settings" in OS.get_cmdline_user_args(): capture_path = "res://docs/settings-preview.png"
 		get_viewport().get_texture().get_image().save_png(capture_path)
+		capture = false
+		music.stop()
+		base_music.stop()
+		await get_tree().create_timer(0.1).timeout
 		get_tree().quit()
+		return
 	if auto_check and check_time > 0.4:
 		auto_check = false
 		load("res://tests/features.gd").new().run(self)
-		for i in range(TOTAL):
-			_collect(i)
-		assert(collected == TOTAL)
-		assert(ship == null)
-		_on_power_repaired()
-		_on_signal_sent()
-		assert(ship != null)
+		load("res://tests/radio_resources.gd").new().run(self)
+		for i in range(TOTAL): _collect(i)
+		assert(collected == TOTAL and found == GOALS and ship != null)
 		ship_timer = 12.0
 		_update_ship(0.1)
 		assert(ship_landed)
@@ -446,13 +455,13 @@ func _process(delta: float) -> void:
 		assert(ending.visible)
 		print("PASS: spherical placement, collection, rescue landing, boarding and completion")
 		# Let pending audio buffers and queued UI nodes finish before shutdown.
-		for audio in [sound, music, alert_audio, fog_audio]: audio.stop()
+		for audio in [sound, music, base_music, alert_audio, fog_audio]: audio.stop()
 		for audio in event_audio.players.values(): audio.stop()
 		await get_tree().create_timer(0.15).timeout
 		get_tree().quit()
 	_update_controls()
 	feedback.tick(delta)
-	if not playing or paused or won or dead or transitioning or portrait_hint.visible: return
+	if not playing or paused or won or dead or transitioning or portrait_hint.visible or audio_settings.visible: return
 	if minigames.visible: return
 	elapsed += delta
 	_update_energy(delta)
@@ -495,11 +504,18 @@ func _update_movement(delta: float) -> void:
 	camera.position = camera.position.lerp(desired, 1.0 - exp(-3.5 * delta))
 	camera.look_at(normal * 2.0, north)
 
+func _item_available(item: Dictionary) -> bool:
+	return item.kind == 1 or (signal_transmitted and communications_online)
+
+func _sync_resource_visibility() -> void:
+	for item in items:
+		item.node.visible = not inside and not item.taken and _item_available(item)
+
 func _nearest() -> int:
 	var index := -1
 	var best := -2.0
 	for i in range(items.size()):
-		if items[i].taken: continue
+		if items[i].taken or not _item_available(items[i]): continue
 		var dot: float = normal.dot(items[i].normal)
 		if dot > best:
 			best = dot
@@ -509,13 +525,13 @@ func _nearest() -> int:
 func _update_items(_delta: float) -> void:
 	for i in range(items.size()):
 		var item := items[i]
-		if item.taken: continue
+		if item.taken or not _item_available(item): continue
 		item.visual.position.y = 0.08 + sin(elapsed * 2.0 + i) * 0.055
 		item.marker.position.y = 1.0 + sin(elapsed * 2 + i) * 0.1
 		item.visual.rotation.y += _delta * 0.25
 
 func _collect(index: int) -> void:
-	if index < 0 or items[index].taken: return
+	if index < 0 or index >= items.size() or items[index].taken or not _item_available(items[index]): return
 	var item := items[index]
 	item.taken = true
 	item.node.visible = false
@@ -525,7 +541,7 @@ func _collect(index: int) -> void:
 	_try_rescue()
 
 func _try_rescue() -> void:
-	if collected == TOTAL and signal_transmitted and ship == null:
+	if collected == TOTAL and signal_transmitted and communications_online and ship == null:
 		_begin_rescue()
 
 func _begin_rescue() -> void:
@@ -558,14 +574,14 @@ func _update_ship(delta: float) -> void:
 
 func _unhandled_key_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.is_pressed() and not event.is_echo():
-		if intro_video.active: return
+		if intro_video.active or outro_video.active or audio_settings.visible: return
 		if event.physical_keycode == KEY_ESCAPE and playing and not won and not dead:
 			if minigames.visible and not paused: minigames.close()
 			else: _toggle_pause()
 			get_viewport().set_input_as_handled()
 
 func _interact() -> void:
-	if dead or paused or transitioning or minigames.visible: return
+	if dead or won or paused or transitioning or minigames.visible or audio_settings.visible: return
 	if inside:
 		var station: String = base_room.station_at(avatar.position)
 		if station == "exit": _transition_to(false)
@@ -808,7 +824,7 @@ func _build_ui() -> void:
 		row.add_child(icon)
 		var column := VBoxContainer.new()
 		row.add_child(column)
-		var count_label := _label("0/6", 36, [PEACH, MINT, CREAM][i])
+		var count_label := _label("0/%d" % GOALS[i], 36, [PEACH, MINT, CREAM][i])
 		counts.append(count_label)
 		column.add_child(count_label)
 		column.add_child(_label(names[i], 20, MUTED))
@@ -817,13 +833,15 @@ func _build_ui() -> void:
 	pause_button.position = Vector2(1335, 817)
 	pause_button.custom_minimum_size.x = 54
 	root.add_child(pause_button)
-	var mute_button := _button("Som", _mute)
+	var mute_button := _button("Som", func(): audio_settings.open())
 	mute_ui = mute_button
 	mute_button.position = Vector2(1268, 817)
 	mute_button.custom_minimum_size.x = 54
 	root.add_child(mute_button)
-	start_menu = _modal("ASTRO", "Um pequeno recomeço.")
-	start_menu.get_child(0).add_child(_button("INICIAR", _start))
+	start_menu = preload("res://scripts/main_menu.gd").new()
+	hud.add_child(start_menu)
+	start_menu.start_requested.connect(_start)
+	start_menu.settings_requested.connect(func(): audio_settings.open())
 	intro = preload("res://scripts/mission_briefing.gd").new()
 	hud.add_child(intro)
 	intro.accepted.connect(_start_game)
@@ -836,6 +854,9 @@ func _build_ui() -> void:
 	death_panel = _modal("MISSÃO ENCERRADA", "Cuide das reservas. Tente outra rota.")
 	death_panel.get_child(0).add_child(_button("Recomeçar expedição  ", func(): get_tree().reload_current_scene()))
 	death_panel.hide()
+	audio_settings = preload("res://scripts/sound_settings.gd").new()
+	hud.add_child(audio_settings)
+	audio_settings.visibility_updated.connect(_update_controls)
 
 func _make_item_icon(kind: int) -> Texture2D:
 	var viewport := SubViewport.new()
@@ -895,10 +916,11 @@ func _vital_bar(color: Color) -> ProgressBar:
 
 func _start() -> void:
 	start_menu.hide()
-	if auto_check or capture:
+	if auto_check or capture or Engine.has_meta("astro_intro_seen"):
 		_start_game()
 	else:
 		music.stop()
+		base_music.stop()
 		intro_video.begin(muted)
 
 func _show_briefing() -> void:
@@ -915,6 +937,7 @@ func _start_game() -> void:
 	hud_root.show()
 	playing = true
 	if not music.playing: music.play()
+	if not base_music.playing: base_music.play()
 	feedback.transmit("start", "Estamos voltando. Mantenha-se seguro.")
 	_update_controls()
 
@@ -929,12 +952,14 @@ func _toggle_pause() -> void:
 	pause_panel.visible = paused
 	if paused: hud.move_child(pause_panel, hud.get_child_count() - 1)
 	music.stream_paused = paused
+	base_music.stream_paused = paused
 	event_audio.set_paused(paused)
 
 func _update_hud(_delta: float) -> void:
 	for i in range(3):
-		counts[i].text = str(found[i]) + "/6"
-		counts[i].add_theme_color_override("font_color", MINT if found[i] == 6 else MUTED)
+		counts[i].text = str(found[i]) + "/" + str(GOALS[i])
+		counts[i].get_parent().get_parent().get_parent().modulate.a = 1.0 if i == 1 or (signal_transmitted and communications_online) else 0.45
+		counts[i].add_theme_color_override("font_color", MINT if found[i] == GOALS[i] else MUTED)
 	oxygen_label.text = "O₂   " + str(ceili(_percent(oxygen))) + "%"
 	food_label.text = "COMIDA   " + str(ceili(_percent(food))) + "%"
 	oxygen_bar.value = oxygen
@@ -962,6 +987,7 @@ func _finish() -> void:
 	won = true
 	event_audio.stop_all()
 	music.stop()
+	base_music.stop()
 	avatar.hide()
 	hud_root.hide()
 	_update_controls()
@@ -973,49 +999,33 @@ func _show_ending() -> void:
 func _build_audio() -> void:
 	music = AudioStreamPlayer.new()
 	add_child(music)
-	var rate := 22050
-	var duration := 32
-	var data := PackedByteArray()
-	data.resize(rate * duration * 2)
-	# Original slow organ-like pads, deep drone and airy overtones.
-	var chords := [[45, 52, 57, 60], [41, 48, 53, 57], [48, 55, 60, 64], [43, 50, 55, 62]]
-	for i in range(rate * duration):
-		var t := float(i) / rate
-		var chord := int(t / 8.0) % 4
-		var blend := smoothstep(0.0, 2.5, fmod(t, 8.0))
-		var pad := 0.0
-		for voice in range(4):
-			for layer in range(2):
-				var note: int = chords[chord if layer == 1 else posmod(chord - 1, 4)][voice]
-				var f := 440.0 * pow(2.0, (note - 69.0) / 12.0)
-				var weight := blend if layer == 1 else 1.0 - blend
-				var detune := 1.0 + sin(t * 0.17 + voice) * 0.0008
-				var organ := sin(TAU * f * detune * t) * 0.68 + sin(TAU * f * 2 * t) * 0.2 + sin(TAU * f * 3 * t) * 0.07
-				pad += organ * weight * 0.07
-		var envelope := pow(sin(PI * t / duration), 0.5)
-		var drone := sin(TAU * 55.0 * t) * 0.08
-		var air := sin(TAU * 659.25 * t + sin(t * 0.2)) * (0.025 + 0.015 * sin(t * 0.4))
-		var wave := (pad + drone + air) * envelope
-		data.encode_s16(i * 2, int(wave * 17000))
-	music.stream = _audio_stream(data, true)
+	music.bus = "Music"
+	music.stream = preload("res://assets/audio/space-galaxy.mp3")
+	music.stream.loop = true
 	music.volume_db = -10
 	music.play()
+	base_music = AudioStreamPlayer.new()
+	base_music.bus = "Music"
+	base_music.stream = preload("res://assets/audio/space-ship.mp3")
+	base_music.stream.loop = true
+	base_music.volume_db = -80
+	add_child(base_music)
+	base_music.play()
 	sound = AudioStreamPlayer.new()
+	sound.bus = "Interactions"
 	add_child(sound)
 	event_audio = preload("res://scripts/event_audio.gd").new()
 	add_child(event_audio)
 	alert_audio = event_audio.players["solar"]
 	fog_audio = event_audio.players["fog"]
 
-func _audio_stream(data: PackedByteArray, loop := false) -> AudioStreamWAV:
-	var stream := AudioStreamWAV.new()
-	stream.format = AudioStreamWAV.FORMAT_16_BITS
-	stream.mix_rate = 22050
-	stream.data = data
-	if loop:
-		stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
-		stream.loop_end = data.size() / 2
-	return stream
+func _update_music(delta: float) -> void:
+	if music == null or base_music == null: return
+	if won or (intro_video != null and intro_video.active): return
+	music_mix = move_toward(music_mix, 1.0 if inside else 0.0, delta / 1.2)
+	var gain := 0.0794 if dead else 0.316
+	music.volume_db = linear_to_db(maxf(0.0001, (1.0 - music_mix) * gain))
+	base_music.volume_db = linear_to_db(maxf(0.0001, music_mix * gain))
 
 func _play_warning() -> void:
 	if not inside: event_audio.play("solar")
@@ -1038,9 +1048,7 @@ func _chime(frequency: float) -> void:
 
 func _mute() -> void:
 	muted = not muted
-	music.volume_db = -80 if muted else -10
-	sound.volume_db = -80 if muted else 0
-	event_audio.set_muted(muted)
+	AudioServer.set_bus_mute(0, muted)
 
 func _build_expansion() -> void:
 	base_room = preload("res://scripts/base_interior.gd").new()
@@ -1091,7 +1099,7 @@ func _build_expansion() -> void:
 	transition_veil.modulate.a = 0
 	hud.add_child(transition_veil)
 	get_viewport().size_changed.connect(_layout_ui)
-	for modal in [start_menu, pause_panel, ending, death_panel]:
+	for modal in [pause_panel, ending, death_panel]:
 		modal.resized.connect(_center_modal.bind(modal))
 	_layout_ui()
 	_update_controls()
@@ -1104,7 +1112,7 @@ func _layout_ui() -> void:
 	pause_ui.custom_minimum_size = Vector2(76, 72)
 	mute_ui.custom_minimum_size = Vector2(100, 72)
 	prompt.position = Vector2((view.x - 450) / 2, view.y - 112)
-	for modal in [start_menu, pause_panel, ending, death_panel]: _center_modal(modal)
+	for modal in [pause_panel, ending, death_panel]: _center_modal(modal)
 	portrait_hint.visible = controls.mobile and view.y > view.x
 	controls.reset()
 	_update_controls()
@@ -1114,9 +1122,10 @@ func _center_modal(modal: Control) -> void:
 
 func _update_controls() -> void:
 	if controls == null: return
-	minigames.frozen = paused or portrait_hint.visible
-	var active := playing and not paused and not dead and not won and not transitioning and not minigames.visible and not portrait_hint.visible
+	minigames.frozen = paused or portrait_hint.visible or audio_settings.visible
+	var active := playing and not paused and not dead and not won and not transitioning and not minigames.visible and not portrait_hint.visible and not audio_settings.visible
 	controls.set_enabled(active)
+	_sync_resource_visibility()
 	if feedback.link_online != communications_online: feedback.set_link(communications_online)
 	feedback.active = active
 	if not active:
@@ -1198,9 +1207,7 @@ func _apply_location(to_inside: bool) -> void:
 	hop_velocity = 0
 	base_room.visible = inside
 	for node in exterior_nodes: node.visible = not inside
-	# Restoring the exterior must preserve the visibility of collected pickups.
-	for item in items:
-		if item.taken: item.node.hide()
+	_sync_resource_visibility()
 	if ship != null: ship.visible = not inside
 	if inside:
 		avatar.position = base_room.position + Vector3(0, 0, 2.6)
@@ -1261,10 +1268,11 @@ func _update_energy(delta: float) -> void:
 		if signal_clock >= SIGNAL_INTERVAL:
 			communications_online = false
 			signal_transmitted = false
+			_sync_resource_visibility()
 			signal_failures += 1
 			feedback.set_link(false)
 			event_audio.play("disconnect")
-			feedback.notice_message("comm_tutorial", "Comunicação instável. Avisos suspensos.", false)
+			feedback.notice_message("comm_tutorial", "Sem sinal. Recursos e avisos ocultos.", false)
 
 func _on_power_repaired() -> void:
 	energy_ready = true
@@ -1281,7 +1289,8 @@ func _on_signal_sent() -> void:
 	signal_transmitted = found[1] >= 6
 	signal_clock = 0
 	_chime(880)
-	feedback.transmit("signal", "Sinal recebido. Estamos chegando.")
+	if signal_transmitted: feedback.transmit("signal", "Sinal recebido. Recursos localizados.")
+	_sync_resource_visibility()
 	if solar_phase != "calm" and not inside: feedback.shelter_tutorial()
 	_try_rescue()
 	_update_controls()
@@ -1293,7 +1302,7 @@ func _assert_world() -> void:
 		assert(absf(item.node.position.length() - R) < 0.01)
 		assert(item.node.basis.y.dot(item.normal) > 0.99)
 		kinds[item.kind] += 1
-	assert(kinds == [6, 6, 6])
+	assert(kinds == GOALS)
 	assert(absf(avatar.position.length() - R) < 0.01)
 	for input_direction in [Vector2(0, 1), Vector2(0, -1), Vector2(1, 0), Vector2(-1, 0)]:
 		normal = Vector3.UP

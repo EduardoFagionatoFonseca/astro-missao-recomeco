@@ -30,6 +30,7 @@ func _ready() -> void:
 	frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(frame)
 	player = VideoStreamPlayer.new()
+	player.bus = "Music"
 	player.expand = true
 	player.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	frame.add_child(player)

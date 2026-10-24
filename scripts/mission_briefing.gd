@@ -89,7 +89,7 @@ func _render() -> void:
 	back_button.visible = page_index == 1
 	next_button.text = "PRÓXIMO  >" if page_index == 0 else "COMEÇAR"
 	if page_index == 0:
-		_step("RESGATE", "Reúna 6 de cada item e ative a antena.")
+		_step("PRIMEIRO, O SINAL", "Reúna 6 peças de antena. Ative a transmissão na base.")
 		var materials := HBoxContainer.new()
 		body.add_child(materials)
 		for i in range(item_icons.size()):
@@ -102,11 +102,11 @@ func _render() -> void:
 			icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 			icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 			row.add_child(icon)
-			_text(row, ["Pedras", "Antena", "Combustível"][i], 28)
-		_step("SUPRIMENTOS", "Abrigo com energia: O₂. Estufa: comida.")
+			_text(row, ["5 pedras", "6 peças", "8 combustíveis"][i], 28)
+		_step("DEPOIS, O RESGATE", "O sinal revela pedras e combustível. Reúna tudo para partir.")
 	else:
-		_step("ENERGIA", "Repare aos 30%. Sem energia, sem O₂.")
-		_step("ANTENA", "Restaure o sinal para receber avisos.")
+		_step("ENERGIA E RESERVAS", "Energia gera O₂. Estufa repõe comida. Repare aos 30%.")
+		_step("MANTENHA O SINAL", "Sem comunicação, recursos restantes e avisos ficam ocultos.")
 		_step("NÉVOA SOLAR", "Janela acesa? Fique dentro. Exposição mata em 3 s.")
 	if page_tween: page_tween.kill()
 	body.modulate.a = 0

@@ -29,6 +29,8 @@ Importação e exportação Web concluídas sem erros. `tests/web_smoke.cjs` abr
 
 ## Evidências e limites
 
+Menu e descoberta: `tests/radio_resources.gd` verifica 6 peças de antena antes da transmissão, 5 pedras/8 combustíveis depois dela, bloqueio de coleta sem sinal, itens ocultos após transição interior/exterior e preservação do inventário. Também cobre volumes independentes, zero silencioso, suspensão da simulação nas configurações e troca entre os dois MP3 em loop. O teste web abre a engrenagem, ajusta música e percorre o início em desktop/toque. No desktop, recarrega a página e confere visualmente o ganho preservado em `web-desktop-settings-restored.png`. `menu-preview.png` e `settings-preview.png` mostram a nova interface; a origem e o prompt da arte estão em `MENU_ART.md`.
+
 A atualização de decolagem cobre névoa planetária de 12 s, morte após 3 s de exposição contínua, proteção e reinício da exposição dentro do abrigo, pulso de energia baixa, sons distintos de coleta/derrota e escrita progressiva. A automação percorre as duas páginas do guia com a simulação congelada e verifica vídeo final antes da tela de vitória. Capturas `solar-preview.png`, `briefing2-preview.png`, `outro-preview.png` e `outro-storyboard.png` registram os novos visuais. O teste web percorre ambos os slides em desktop e toque emulado.
 
 Capturas `web-desktop-*.png` e `web-mobile-*.png` documentam menu, vídeo, exploração, base, painel e movimento. `intro-storyboard.png` mostra um quadro da cutscene.

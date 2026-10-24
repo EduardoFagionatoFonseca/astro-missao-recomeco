@@ -8,6 +8,7 @@ var muted := false
 func _ready() -> void:
 	for kind: String in LEVELS:
 		var player := AudioStreamPlayer.new()
+		player.bus = "Interactions" if kind in ["collect", "typing"] else "Alerts"
 		player.stream = _synthesize(kind)
 		player.volume_db = LEVELS[kind]
 		add_child(player)
