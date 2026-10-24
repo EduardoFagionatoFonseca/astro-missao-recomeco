@@ -35,6 +35,9 @@ const {chromium, devices} = require(process.env.PLAYWRIGHT_MODULE || 'playwright
       await page.waitForTimeout(600);
       await page.screenshot({path:`docs/web-${mobile?'mobile':'desktop'}-briefing.png`});
       await click(720,765);
+      await page.waitForTimeout(350);
+      await page.screenshot({path:`docs/web-${mobile?'mobile':'desktop'}-briefing2.png`});
+      await click(900,765);
       await page.waitForTimeout(700);
       await page.screenshot({path:`docs/web-${mobile?'mobile':'desktop'}-world.png`});
       if (mobile) await click(720,825); else await page.keyboard.press('e');

@@ -13,7 +13,7 @@ No Windows, abra **Jogar.cmd**. O iniciador usa o Godot instalado na pasta Downl
 - Esc: fechar minigame ou pausar. Botão Som: silenciar música e efeitos.
 - Celular: joystick e botões aparecem automaticamente; jogue na horizontal. A orientação vertical suspende a partida.
 
-Iniciar apresenta um vídeo original de 22 segundos com trilha e legendas. Pular, Espaço, Enter ou Esc abrem o guia da missão. O guia ocupa cerca de 70% da tela e mantém recursos e eventos suspensos até confirmar **ENTENDI / EXPLORAR**. Reiniciar após derrota não repete o vídeo na mesma sessão.
+Iniciar apresenta um vídeo original de 22 segundos com trilha e legendas. Pular, Espaço, Enter ou Esc abrem o guia da missão. O guia ocupa cerca de 70% da tela e tem duas páginas: **Próximo** e **Começar**. Recursos e eventos ficam suspensos até Começar. Reiniciar após derrota não repete o vídeo na mesma sessão. Embarcar inicia uma cutscene de decolagem de 14 segundos, também pulável, antes da tela de vitória.
 
 ## Um passeio completo
 
@@ -24,7 +24,7 @@ Dentro do raio de recuperação de oxigênio, use **Entrar na base**. O interior
 - **Energia:** conecte três cabos com letras iguais. O reparo restaura 100% e reinicia o ciclo de **63,75 segundos**. Em 30%, já é possível reparar preventivamente. **Sem energia, a produção de O₂ para**, inclusive dentro da base, e a reserva do traje continua caindo. A partida começa com energia ativa.
 - **Comunicação:** o rádio de avisos começa ativo e cai após **85 segundos**. Para restaurar a antena e enviar a posição ao resgate, reúna seis peças e sobreponha as ondas por três segundos. Cada queda muda a sintonia. Depois de chamar a nave, não há novas quedas durante a aproximação.
 
-Dentro da base, o O₂ se recupera **se houver energia** e não há dano solar; o alimento continua sendo consumido. A janela fica iluminada durante o aviso e a onda, apagando quando é seguro sair. A onda e a aproximação da nave continuam enquanto você está no interior. **Nos minigames, recursos e temporizadores ficam suspensos.**
+Dentro da base, o O₂ se recupera **se houver energia** e não há dano solar; o alimento continua sendo consumido. A janela fica iluminada durante o aviso e a névoa, apagando quando é seguro sair. A radiação e a aproximação da nave continuam enquanto você está no interior. **Nos minigames, recursos e temporizadores ficam suspensos.**
 
 As mensagens da tripulação se limitam ao início, confirmação do sinal e pouso. **Inteligência artificial AXIOS** avisa sobre energia em 30%, a primeira pane e radiação prevista. Sem comunicação, os avisos ligados à antena são descartados, inclusive os já abertos; o primeiro diagnóstico local de desconexão apenas explica que os avisos foram suspensos. A janela e os indicadores físicos continuam funcionando sem rádio.
 
@@ -32,9 +32,9 @@ Oxigênio e alimento exigem viagens de reabastecimento: a base com energia repõ
 
 As reservas aumentaram 5%: O₂ dura cerca de **31 segundos** e comida cerca de **58 segundos**. Internamente vão até 105 unidades; a interface continua mostrando 100% quando cheias. Barras ficam vermelhas e pulsam quando baixas. Depois de zerar, há dois segundos de tolerância. Pausar congela os prazos. A base energizada repõe O₂ em aproximadamente 4,2 segundos.
 
-Após 100 segundos, o céu clareia durante dez segundos de aviso, seguidos de uma onda de dez segundos. A antena conectada antecipa a previsão em 20 segundos e mostra a primeira instrução de abrigo. O aviso físico do céu e a janela funcionam mesmo sem rádio. Um único eco baixo acompanha o aviso. **Só o interior protege**. Tocar a onda retira 35 de O₂ e 12 de alimento uma vez por onda.
+Após 100 segundos, o céu clareia durante dez segundos de aviso, seguidos de uma névoa que cobre o planeta inteiro por 12 segundos. A antena conectada antecipa a previsão em 20 segundos e mostra a primeira instrução de abrigo. O aviso físico do céu e a janela funcionam mesmo sem rádio. Um único eco baixo acompanha o aviso. **Só o interior protege**. Três segundos de exposição contínua causam derrota; entrar no abrigo zera a exposição. A borda da tela indica o perigo crescente.
 
-O₂ e alimento ficam progressivamente vermelhos e pulsam suavemente quando baixos. Um aviso de dois tons, diferente do sol, soa em 25% e 12%; na faixa crítica, pode repetir a cada oito segundos. Energia e desconexão têm sons próprios. Todos os efeitos são sintetizados originalmente, sem gravações externas.
+O₂ e alimento ficam progressivamente vermelhos e pulsam suavemente quando baixos. Energia também pulsa em vermelho aos 30% ou menos. Um aviso de dois tons, diferente do sol, soa em 25% e 12%; na faixa crítica, pode repetir a cada oito segundos. Energia e desconexão têm sons próprios. Mensagens aparecem a 70 caracteres por segundo com digitação discreta. Coletas tocam notas ascendentes; derrota toca um acorde descendente. Todos os efeitos são sintetizados originalmente, sem gravações externas ou licenças de terceiros.
 
 Os três objetivos mostram miniaturas dos próprios modelos, renderizadas uma vez em viewports independentes. Um tema compartilhado personaliza painéis, botões, barras e sliders com slots escuros, bordas retas e fontes maiores; não usa a aparência padrão dos controles. Os textos de jogo foram reduzidos e as primeiras falhas ensinam suas regras em contexto.
 

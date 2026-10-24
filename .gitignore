@@ -5,3 +5,4 @@ build/
 *.log
 *.uid
 docs/*.png.import
+__pycache__/

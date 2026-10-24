@@ -6,9 +6,9 @@ Base: main `f9259e0`. Ambiente: Windows, Godot 4.7.2, Chrome. Capturas geradas p
 
 `godot --headless --path . -- --smoke-test` passou sem erros:
 
-- Suíte original: mundo, orientação, sobrevivência, recuperação, morte, onda solar, coleta e pouso.
+- Suíte original: mundo, orientação, sobrevivência, recuperação, morte, névoa solar, coleta e pouso.
 - Coletar tudo não cria nave sem transmissão.
-- Dois dedos independentes para joystick/corrida e limpeza da entrada.
+- Dois dedos independentes para joystick/ação e limpeza da entrada.
 - Limites da sala, bloqueio de móveis, estações e posição externa preservada.
 - Conexão errada não avança; três corretas restauram energia.
 - Sinal bloqueado sem energia/seis peças; três segundos de estabilidade, perda de estabilidade e pausa.
@@ -28,6 +28,8 @@ Capturas adicionais: `briefing-preview.png`, `window-preview.png` e `web-*-brief
 Importação e exportação Web concluídas sem erros. `tests/web_smoke.cjs` abre o export local, inicia/pula o vídeo, entra na base, percorre o interior com teclado e exercita o joystick com toque emulado. Registra erros de console/página e capturas para inspeção. Como a interface é canvas, os testes usam coordenadas; confira as capturas junto ao console.
 
 ## Evidências e limites
+
+A atualização de decolagem cobre névoa planetária de 12 s, morte após 3 s de exposição contínua, proteção e reinício da exposição dentro do abrigo, pulso de energia baixa, sons distintos de coleta/derrota e escrita progressiva. A automação percorre as duas páginas do guia com a simulação congelada e verifica vídeo final antes da tela de vitória. Capturas `solar-preview.png`, `briefing2-preview.png`, `outro-preview.png` e `outro-storyboard.png` registram os novos visuais. O teste web percorre ambos os slides em desktop e toque emulado.
 
 Capturas `web-desktop-*.png` e `web-mobile-*.png` documentam menu, vídeo, exploração, base, painel e movimento. `intro-storyboard.png` mostra um quadro da cutscene.
 

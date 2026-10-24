@@ -6,13 +6,13 @@ const TOTAL := 18
 const OXYGEN_RATE := 3.4
 const FOOD_RATE := 1.8
 const SOLAR_WARNING := 10.0
-const SOLAR_DURATION := 10.0
+const SOLAR_DURATION := 12.0
 const SOLAR_INTERVAL := 100.0
 const ENERGY_INTERVAL := 63.75
 const SIGNAL_INTERVAL := 85.0
 const MOVE_SPEED := 3.78
 const MAX_RESERVE := 105.0
-const WAVE_HALF_WIDTH := 0.055
+const EXPOSURE_LIMIT := 3.0
 const SHELTER_RADIUS := 3.1
 const CREAM := Color("f0e9d9")
 const MUTED := Color("a3b7c4")
@@ -62,10 +62,9 @@ var solar_phase := "calm"
 var solar_remaining := SOLAR_INTERVAL
 var oxygen_label: Label
 var food_label: Label
-var solar_wave: MeshInstance3D
-var wave_hit := false
+var solar_fog: MeshInstance3D
 var alert_audio: AudioStreamPlayer
-var wave_audio: AudioStreamPlayer
+var fog_audio: AudioStreamPlayer
 var oxygen_low := false
 var food_low := false
 var oxygen_critical := false
@@ -84,6 +83,7 @@ var distant_halo: MeshInstance3D
 var controls: Control
 var base_room: Node3D
 var minigames: Control
+var outro_video: Control
 var intro_video: Control
 var inside := false
 var transitioning := false
@@ -108,6 +108,7 @@ var prompt: Button
 var prompt_target := ""
 var prompt_tween: Tween
 var transition_veil: ColorRect
+var power_label: Label
 var base_status: Label
 var objectives_ui: HBoxContainer
 var vitals_ui: VBoxContainer
@@ -119,7 +120,7 @@ var hud_root: Control
 func _ready() -> void:
 	rng.seed = 60318
 	auto_check = "--smoke-test" in OS.get_cmdline_user_args()
-	capture = "--capture" in OS.get_cmdline_user_args() or "--capture-intro" in OS.get_cmdline_user_args() or "--capture-wave" in OS.get_cmdline_user_args() or "--capture-critical" in OS.get_cmdline_user_args() or "--capture-base" in OS.get_cmdline_user_args() or "--capture-power" in OS.get_cmdline_user_args() or "--capture-signal" in OS.get_cmdline_user_args()
+	capture = "--capture" in OS.get_cmdline_user_args() or "--capture-intro" in OS.get_cmdline_user_args() or "--capture-fog" in OS.get_cmdline_user_args() or "--capture-critical" in OS.get_cmdline_user_args() or "--capture-base" in OS.get_cmdline_user_args() or "--capture-power" in OS.get_cmdline_user_args() or "--capture-signal" in OS.get_cmdline_user_args()
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--capture-"): capture = true
 	_build_environment()
@@ -147,9 +148,13 @@ func _ready() -> void:
 	_build_expansion()
 	if auto_check or (capture and not "--capture-intro" in OS.get_cmdline_user_args()):
 		_start()
-	if "--capture-wave" in OS.get_cmdline_user_args():
+	if "--capture-fog" in OS.get_cmdline_user_args():
 		solar_phase = "active"
 		solar_clock = 6.0
+	if "--capture-outro" in OS.get_cmdline_user_args(): _finish()
+	if "--capture-briefing2" in OS.get_cmdline_user_args():
+		_show_briefing()
+		intro._next()
 	if "--capture-critical" in OS.get_cmdline_user_args():
 		food = 2.5
 		oxygen = 10
@@ -326,14 +331,17 @@ func _build_planet() -> void:
 		var n := Vector3(sin(angle) * 0.22, 1.0, cos(angle) * 0.22).normalized()
 		var root := _surface(n)
 		_cylinder(root, 0.045, 0.23, Color("eac49e"), Vector3(0, 0.12, 0))
-	solar_wave = MeshInstance3D.new()
-	add_child(solar_wave)
-	var wave_material := _material(Color("efac76"), 0.6)
-	wave_material.cull_mode = BaseMaterial3D.CULL_DISABLED
-	wave_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	solar_wave.material_override = wave_material
-	solar_wave.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	solar_wave.hide()
+	solar_fog = MeshInstance3D.new()
+	add_child(solar_fog)
+	var shell := SphereMesh.new()
+	shell.radius = R + 1.5
+	shell.height = (R + 1.5) * 2
+	solar_fog.mesh = shell
+	var fog_material := ShaderMaterial.new()
+	fog_material.shader = preload("res://scripts/radiation_fog.gdshader")
+	solar_fog.material_override = fog_material
+	solar_fog.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	solar_fog.hide()
 
 func _fibonacci(i: int, count: int) -> Vector3:
 	var y := 1.0 - (float(i) + 0.5) / float(count) * 2.0
@@ -406,7 +414,7 @@ func _build_items() -> void:
 func _process(delta: float) -> void:
 	check_time += delta
 	if capture and check_time > 2.0:
-		var capture_path := "res://docs/solar-preview.png" if "--capture-wave" in OS.get_cmdline_user_args() else "res://docs/preview.png"
+		var capture_path := "res://docs/solar-preview.png" if "--capture-fog" in OS.get_cmdline_user_args() else "res://docs/preview.png"
 		if "--capture-critical" in OS.get_cmdline_user_args(): capture_path = "res://docs/critical-preview.png"
 		if "--capture-base" in OS.get_cmdline_user_args(): capture_path = "res://docs/base-preview.png"
 		if "--capture-power" in OS.get_cmdline_user_args(): capture_path = "res://docs/power-preview.png"
@@ -414,6 +422,8 @@ func _process(delta: float) -> void:
 		if "--capture-warning" in OS.get_cmdline_user_args(): capture_path = "res://docs/warning-preview.png"
 		if "--capture-briefing" in OS.get_cmdline_user_args(): capture_path = "res://docs/briefing-preview.png"
 		if "--capture-window" in OS.get_cmdline_user_args(): capture_path = "res://docs/window-preview.png"
+		if "--capture-outro" in OS.get_cmdline_user_args(): capture_path = "res://docs/outro-preview.png"
+		if "--capture-briefing2" in OS.get_cmdline_user_args(): capture_path = "res://docs/briefing2-preview.png"
 		get_viewport().get_texture().get_image().save_png(capture_path)
 		get_tree().quit()
 	if auto_check and check_time > 0.4:
@@ -431,10 +441,12 @@ func _process(delta: float) -> void:
 		assert(ship_landed)
 		normal = ship_normal
 		_interact()
-		assert(won)
+		assert(won and outro_video.active and not ending.visible)
+		outro_video._finish()
+		assert(ending.visible)
 		print("PASS: spherical placement, collection, rescue landing, boarding and completion")
 		# Let pending audio buffers and queued UI nodes finish before shutdown.
-		for audio in [sound, music, alert_audio, wave_audio]: audio.stop()
+		for audio in [sound, music, alert_audio, fog_audio]: audio.stop()
 		for audio in event_audio.players.values(): audio.stop()
 		await get_tree().create_timer(0.15).timeout
 		get_tree().quit()
@@ -509,7 +521,7 @@ func _collect(index: int) -> void:
 	item.node.visible = false
 	found[item.kind] += 1
 	collected += 1
-	_chime(660.0 + item.kind * 110.0)
+	event_audio.play("collect")
 	_try_rescue()
 
 func _try_rescue() -> void:
@@ -588,82 +600,42 @@ func _update_survival(delta: float) -> void:
 	else:
 		oxygen = maxf(0.0, oxygen - delta * OXYGEN_RATE)
 	food = maxf(0.0, food - delta * FOOD_RATE)
-	exposure = maxf(0.0, exposure - delta * 5.0)
-	var previous_clock := solar_clock
-	solar_clock += delta
-	if solar_phase == "calm":
-		solar_remaining = SOLAR_INTERVAL - solar_clock
-		if solar_remaining <= 0.0:
-			solar_phase = "warning"
-			solar_clock = 0.0
-			solar_remaining = SOLAR_WARNING
-			_play_warning()
-	elif solar_phase == "warning":
-		solar_remaining = SOLAR_WARNING - solar_clock
-		if solar_remaining <= 0.0:
-			solar_phase = "active"
-			solar_clock = 0.0
-			solar_remaining = SOLAR_DURATION
-			wave_hit = false
-			if not inside and not muted: wave_audio.play()
-	else:
-		solar_remaining = SOLAR_DURATION - solar_clock
-		if not wave_hit and _wave_contact(normal, previous_clock, solar_clock):
-			wave_hit = true
-			oxygen = maxf(0, oxygen - 35.0)
-			food = maxf(0, food - 12.0)
-			exposure = 60.0
-			_chime(150)
-		if solar_remaining <= 0.0:
-			solar_phase = "calm"
-			solar_cycle += 1
-			solar_clock = 0.0
-			solar_remaining = SOLAR_INTERVAL
-			wave_audio.stop()
-	solar_wave.visible = solar_phase == "active" and not inside
-	if solar_wave.visible: _draw_wave()
+	_update_radiation(delta)
 	_update_last_chance(delta)
 	_update_solar_notices()
 	base_room.set_solar(solar_phase)
 	_update_distant_light()
 	_resource_warnings(delta)
 
-func _wave_contact(at: Vector3, from_time: float, to_time: float) -> bool:
-	# Sweep across the actual front, so a fast frame cannot skip a collision.
-	if inside: return false
-	var angle := acos(clampf(at.dot(solar_axis), -1, 1))
-	var before := clampf(from_time / SOLAR_DURATION, 0, 1) * PI
-	var after := clampf(to_time / SOLAR_DURATION, 0, 1) * PI
-	return angle >= before - WAVE_HALF_WIDTH and angle <= after + WAVE_HALF_WIDTH
-
-func _wave_point(angle: float, azimuth: float) -> Vector3:
-	var axis := solar_axis
-	var tangent := Vector3.RIGHT.slide(axis).normalized()
-	var bitangent := axis.cross(tangent).normalized()
-	return (axis * cos(angle) + (tangent * cos(azimuth) + bitangent * sin(azimuth)) * sin(angle)).normalized()
-
-func _draw_wave() -> void:
-	# The wave originates from the same world direction as the distant light.
-	var angle := clampf(solar_clock / SOLAR_DURATION, 0, 1) * PI
-	var vertices := PackedVector3Array()
-	for i in range(128):
-		var a := TAU * i / 128.0
-		var b := TAU * (i + 1) / 128.0
-		var points := [
-			_wave_point(maxf(0.001, angle - WAVE_HALF_WIDTH), a),
-			_wave_point(minf(PI - 0.001, angle + WAVE_HALF_WIDTH), a),
-			_wave_point(minf(PI - 0.001, angle + WAVE_HALF_WIDTH), b),
-			_wave_point(maxf(0.001, angle - WAVE_HALF_WIDTH), b)]
-		for index in [0, 1, 2, 0, 2, 3]: vertices.append(points[index] * (R + 0.09))
-	if vertices.is_empty():
-		solar_wave.mesh = null
-		return
-	var arrays := []
-	arrays.resize(Mesh.ARRAY_MAX)
-	arrays[Mesh.ARRAY_VERTEX] = vertices
-	var mesh := ArrayMesh.new()
-	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
-	solar_wave.mesh = mesh
+func _update_radiation(delta: float) -> void:
+	var remaining := delta
+	while remaining > 0.00001 and not dead:
+		var duration: float = {"calm": SOLAR_INTERVAL, "warning": SOLAR_WARNING, "active": SOLAR_DURATION}[solar_phase]
+		var step := minf(remaining, maxf(0.0, duration - solar_clock))
+		if solar_phase == "active" and not inside:
+			exposure += step
+			if exposure >= EXPOSURE_LIMIT: _die()
+		else:
+			exposure = 0.0
+		solar_clock += step
+		remaining -= step
+		if solar_clock >= duration:
+			solar_clock = 0.0
+			match solar_phase:
+				"calm":
+					solar_phase = "warning"
+					_play_warning()
+				"warning":
+					solar_phase = "active"
+					if not inside: event_audio.play("fog")
+				"active":
+					solar_phase = "calm"
+					solar_cycle += 1
+					exposure = 0.0
+					fog_audio.stop()
+	var duration: float = {"calm": SOLAR_INTERVAL, "warning": SOLAR_WARNING, "active": SOLAR_DURATION}[solar_phase]
+	solar_remaining = duration - solar_clock
+	solar_fog.visible = solar_phase == "active" and not inside
 
 func _resource_warnings(delta := 0.0) -> void:
 	health_alarm_cooldown = maxf(0, health_alarm_cooldown - delta)
@@ -699,8 +671,8 @@ func _update_last_chance(delta: float) -> void:
 func _die() -> void:
 	if dead: return
 	dead = true
-	wave_audio.stop()
-	alert_audio.stop()
+	event_audio.stop_all()
+	event_audio.play("death")
 	music.volume_db = -22 if not muted else -80
 	death_panel.show()
 	_update_controls()
@@ -933,7 +905,7 @@ func _show_briefing() -> void:
 	playing = false
 	start_menu.hide()
 	hud_root.hide()
-	intro.show()
+	intro.open()
 	_update_controls()
 
 func _start_game() -> void:
@@ -979,18 +951,24 @@ func _update_hud(_delta: float) -> void:
 		pair[1].add_theme_color_override("font_color", pair[3].lerp(urgent, severity))
 	var depleted := 1.0 - clampf(_percent(minf(oxygen, food)) / 30.0, 0, 1)
 	var grace := clampf(maxf(oxygen_empty_time, food_empty_time) / 2.0, 0, 1)
-	var intensity := depleted * 0.65 + grace * 0.3
+	power_label.add_theme_color_override("font_color", Color("ef7777") if energy_charge <= 30 else MINT)
+	power_label.modulate.a = 0.72 + pulse * 0.28 if energy_charge <= 30 else 1.0
+	var intensity := maxf(depleted * 0.65 + grace * 0.3, exposure / EXPOSURE_LIMIT * 0.9)
 	if dead: intensity = 0.98
 	vignette_material.set_shader_parameter("intensity", intensity)
 
 func _finish() -> void:
+	if won: return
 	won = true
-	wave_audio.stop()
-	alert_audio.stop()
-	avatar.visible = false
-	ending.show()
+	event_audio.stop_all()
+	music.stop()
+	avatar.hide()
+	hud_root.hide()
 	_update_controls()
-	_chime(1046.5)
+	outro_video.begin(muted, true)
+
+func _show_ending() -> void:
+	if won: ending.show()
 
 func _build_audio() -> void:
 	music = AudioStreamPlayer.new()
@@ -1027,7 +1005,7 @@ func _build_audio() -> void:
 	event_audio = preload("res://scripts/event_audio.gd").new()
 	add_child(event_audio)
 	alert_audio = event_audio.players["solar"]
-	wave_audio = event_audio.players["wave"]
+	fog_audio = event_audio.players["fog"]
 
 func _audio_stream(data: PackedByteArray, loop := false) -> AudioStreamWAV:
 	var stream := AudioStreamWAV.new()
@@ -1075,11 +1053,15 @@ func _build_expansion() -> void:
 	prompt.custom_minimum_size = Vector2(450, 76)
 	hud.add_child(prompt)
 	prompt.hide()
+	power_label = _label("", 24, MINT)
+	power_label.position = Vector2(42, 265)
+	hud_root.add_child(power_label)
 	base_status = _label("", 24, MINT)
-	base_status.position = Vector2(42, 265)
+	base_status.position = Vector2(42, 302)
 	hud_root.add_child(base_status)
 	feedback = preload("res://scripts/mission_feedback.gd").new()
 	hud.add_child(feedback)
+	feedback.typing_tick.connect(func(): event_audio.play("typing"))
 	feedback.transmission_started.connect(func(): event_audio.play("radio"))
 	minigames = preload("res://scripts/base_minigames.gd").new()
 	hud.add_child(minigames)
@@ -1089,6 +1071,9 @@ func _build_expansion() -> void:
 	intro_video = preload("res://scripts/intro_video.gd").new()
 	hud.add_child(intro_video)
 	intro_video.finished.connect(_show_briefing)
+	outro_video = preload("res://scripts/intro_video.gd").new()
+	hud.add_child(outro_video)
+	outro_video.finished.connect(_show_ending)
 	intro.configure(material_icons, controls.mobile)
 	portrait_hint = PanelContainer.new()
 	portrait_hint.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -1138,7 +1123,9 @@ func _update_controls() -> void:
 		prompt.hide()
 		prompt_target = ""
 	base_status.visible = playing and not intro_video.active and not won and not dead
-	base_status.text = ("ENERGIA %d%%" % energy_charge if energy_ready else "O₂ OFFLINE") + ("\nRÁDIO ONLINE" if communications_online else "\nRÁDIO OFFLINE")
+	power_label.visible = base_status.visible
+	power_label.text = "ENERGIA %d%%" % energy_charge if energy_ready else "ENERGIA OFF / O₂ OFF"
+	base_status.text = "RÁDIO ONLINE" if communications_online else "RÁDIO OFFLINE"
 
 func _jump() -> void:
 	if controls.enabled and not inside and hop == 0: hop_velocity = 2.4
@@ -1206,6 +1193,7 @@ func _apply_location(to_inside: bool) -> void:
 		exterior_normal = normal
 		exterior_north = north
 	inside = to_inside
+	if inside: exposure = 0.0
 	hop = 0
 	hop_velocity = 0
 	base_room.visible = inside
@@ -1226,11 +1214,10 @@ func _apply_location(to_inside: bool) -> void:
 		_align(avatar, normal, north)
 		camera.position = normal * 39.0 - north * 29.0
 		camera.look_at(normal * 2.0, north)
-	solar_wave.visible = not inside and solar_phase == "active"
-	if solar_wave.visible: _draw_wave()
+	solar_fog.visible = not inside and solar_phase == "active"
 	_update_distant_light()
 	if inside:
-		wave_audio.stop()
+		fog_audio.stop()
 		alert_audio.stop()
 	base_room.set_power(energy_ready, energy_charge)
 	base_room.set_solar(solar_phase)
@@ -1352,29 +1339,32 @@ func _assert_survival() -> void:
 	assert(distant_light.position.normalized().dot(solar_axis) > 0.999)
 	solar_clock = SOLAR_INTERVAL - 0.1
 	solar_phase = "calm"
-	_update_survival(0.2)
-	assert(solar_phase == "warning" and solar_remaining == SOLAR_WARNING)
+	_update_radiation(0.2)
+	assert(solar_phase == "warning" and is_equal_approx(solar_remaining, SOLAR_WARNING - 0.1))
 	solar_clock = SOLAR_WARNING - 0.1
-	_update_survival(0.2)
-	assert(solar_phase == "active" and wave_audio.playing)
-	var contact := _wave_point(PI / 2, 0)
-	assert(_wave_contact(contact, 4.9, 5.1) and not _wave_contact(contact, 0, 1))
-	normal = camp_normal
-	oxygen = MAX_RESERVE
-	food = MAX_RESERVE
-	wave_hit = false
-	solar_clock = acos(clampf(camp_normal.dot(solar_axis), -1, 1)) / PI * SOLAR_DURATION
-	_update_survival(0.01)
-	assert(wave_hit and oxygen == MAX_RESERVE - 35)
+	_update_radiation(0.2)
+	assert(solar_phase == "active" and fog_audio.playing)
+	for point in [Vector3.UP, Vector3.DOWN, camp_normal]:
+		normal = point
+		exposure = 0
+		_update_radiation(0.8)
+		assert(is_equal_approx(exposure, 0.8) and not dead)
+	_apply_location(true)
+	assert(exposure == 0)
+	_update_radiation(3.1)
+	assert(not dead and exposure == 0)
+	_apply_location(false)
+	_update_radiation(2.99)
+	assert(not dead)
+	_update_radiation(0.02)
+	assert(dead and event_audio.players.death.playing)
+	dead = false
+	death_panel.hide()
+	exposure = 0
 	inside = true
-	wave_hit = false
-	oxygen = MAX_RESERVE
-	_update_survival(0.01)
-	assert(not wave_hit and oxygen == MAX_RESERVE)
+	_update_radiation(20)
+	assert(solar_phase == "calm")
 	inside = false
-	solar_clock = SOLAR_DURATION - 0.1
-	_update_survival(0.2)
-	assert(solar_phase == "calm" and not wave_audio.playing)
 	normal = Vector3.DOWN
 	oxygen = 0
 	food = MAX_RESERVE
@@ -1410,7 +1400,7 @@ func _assert_survival() -> void:
 	solar_clock = 0
 	solar_phase = "calm"
 	solar_remaining = SOLAR_INTERVAL
-	wave_audio.stop()
+	fog_audio.stop()
 	alert_audio.stop()
 	_resource_warnings()
-	print("PASS: larger reserves, recovery, grace/death, swept radiation contact and interior protection")
+	print("PASS: larger reserves, recovery, grace/death, planet-wide fog, three-second exposure and interior protection")
