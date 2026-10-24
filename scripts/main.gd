@@ -15,7 +15,8 @@ const MOVE_SPEED := 3.8934
 const PLANET_MUSIC_GAIN := 0.16
 const BASE_MUSIC_GAIN := 0.24
 const MAX_RESERVE := 105.0
-const EXPOSURE_LIMIT := 3.0
+const EXPOSURE_LIMIT := 5.0
+const VITAL_GRACE := 2.0
 const SHELTER_RADIUS := 3.1
 const CREAM := Color("f0e9d9")
 const MUTED := Color("a3b7c4")
@@ -122,6 +123,8 @@ var vitals_ui: VBoxContainer
 var mute_ui: Button
 var portrait_hint: PanelContainer
 var hud_root: Control
+var survival_timer: PanelContainer
+var survival_timer_label: Label
 var qa_clock := 0.0
 
 func _ready() -> void:
@@ -453,6 +456,7 @@ func _process(delta: float) -> void:
 		auto_check = false
 		load("res://tests/features.gd").new().run(self)
 		load("res://tests/mission_flow.gd").new().run(self)
+		load("res://tests/countdowns_audio.gd").new().run(self)
 		load("res://tests/survival_tuning.gd").new().run(self)
 		load("res://tests/terrain_mobile.gd").new().run(self)
 		load("res://tests/radio_resources.gd").new().run(self)
@@ -718,7 +722,7 @@ func _resource_warnings(delta := 0.0) -> void:
 func _update_last_chance(delta: float) -> void:
 	oxygen_empty_time = oxygen_empty_time + delta if oxygen <= 0 else 0.0
 	food_empty_time = food_empty_time + delta if food <= 0 else 0.0
-	if oxygen_empty_time >= 2.0 or food_empty_time >= 2.0:
+	if oxygen_empty_time >= VITAL_GRACE or food_empty_time >= VITAL_GRACE:
 		_die()
 
 func _die() -> void:
@@ -990,13 +994,28 @@ func _update_hud(_delta: float) -> void:
 		pair[0].modulate.a = lerpf(1.0, 0.86 + pulse * 0.14, severity)
 		pair[1].add_theme_color_override("font_color", pair[3].lerp(urgent, severity))
 	var depleted := 1.0 - clampf(_percent(minf(oxygen, food)) / 30.0, 0, 1)
-	var grace := clampf(maxf(oxygen_empty_time, food_empty_time) / 2.0, 0, 1)
+	var grace := clampf(maxf(oxygen_empty_time, food_empty_time) / VITAL_GRACE, 0, 1)
 	power_label.add_theme_color_override("font_color", Color("ef7777") if energy_charge <= 30 else MINT)
 	power_label.modulate.a = 0.72 + pulse * 0.28 if energy_charge <= 30 else 1.0
 	var intensity := depleted * 0.65 + grace * 0.3
 	if dead: intensity = 0.98
 	vignette_material.set_shader_parameter("intensity", intensity)
 	vignette_material.set_shader_parameter("radiation", clampf(exposure / EXPOSURE_LIMIT, 0, 1) if not inside and not dead and solar_phase == "active" else 0.0)
+	_update_survival_timer()
+
+func _update_survival_timer() -> void:
+	var lines: Array[String] = []
+	if playing and not dead and not won:
+		if solar_phase == "active" and not inside:
+			lines.append("RADIAÇÃO   %.1f s" % maxf(0, EXPOSURE_LIMIT - exposure))
+		if _percent(oxygen) <= 12 and not (_at_camp() and energy_ready):
+			lines.append("O₂   %.1f s" % (oxygen / OXYGEN_RATE + maxf(0, VITAL_GRACE - oxygen_empty_time)))
+		if _percent(food) <= 12:
+			lines.append("COMIDA   %.1f s" % (food / FOOD_RATE + maxf(0, VITAL_GRACE - food_empty_time)))
+	survival_timer.visible = not lines.is_empty()
+	survival_timer_label.text = "\n".join(lines).replace(".", ",")
+	survival_timer.reset_size()
+	survival_timer.position = Vector2((get_viewport().get_visible_rect().size.x - survival_timer.size.x) / 2, 310)
 
 func _finish() -> void:
 	if won: return
@@ -1092,6 +1111,16 @@ func _build_expansion() -> void:
 	minigames.power_repaired.connect(_on_power_repaired)
 	minigames.signal_sent.connect(_on_signal_sent)
 	minigames.closed.connect(_update_controls)
+	survival_timer = PanelContainer.new()
+	survival_timer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	survival_timer.custom_minimum_size.x = 420
+	survival_timer.add_theme_stylebox_override("panel", _style(Color("211c19ef"), Color("ce8758"), 4))
+	survival_timer_label = _label("", 30, PEACH)
+	survival_timer_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	survival_timer_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	survival_timer.add_child(survival_timer_label)
+	hud.add_child(survival_timer)
+	survival_timer.hide()
 	intro_video = preload("res://scripts/intro_video.gd").new()
 	hud.add_child(intro_video)
 	intro_video.finished.connect(_show_briefing)
@@ -1265,7 +1294,7 @@ func _update_indoor_movement(delta: float) -> void:
 
 func _update_solar_notices() -> void:
 	if not communications_online: return
-	if solar_phase == "warning" and solar_clock >= SOLAR_WARNING - 4:
+	if solar_phase == "warning" and solar_clock >= SOLAR_WARNING - 5:
 		var seconds := ceili(SOLAR_WARNING - solar_clock)
 		feedback.transmit("solar_warning_%d" % solar_cycle, "Radiação em %d s. Entre no abrigo." % seconds, true, feedback.AXIOS, true, true)
 
@@ -1386,7 +1415,7 @@ func _assert_survival() -> void:
 	_update_radiation(3.1)
 	assert(not dead and exposure == 0)
 	_apply_location(false)
-	_update_radiation(2.99)
+	_update_radiation(EXPOSURE_LIMIT - 0.01)
 	assert(not dead)
 	_update_radiation(0.02)
 	assert(dead and event_audio.players.death.playing)
@@ -1435,4 +1464,4 @@ func _assert_survival() -> void:
 	fog_audio.stop()
 	alert_audio.stop()
 	_resource_warnings()
-	print("PASS: larger reserves, recovery, grace/death, planet-wide fog, three-second exposure and interior protection")
+	print("PASS: larger reserves, recovery, grace/death, planet-wide fog, five-second exposure and interior protection")

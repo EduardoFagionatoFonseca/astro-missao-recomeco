@@ -37,16 +37,16 @@ func run(game: Node3D) -> void:
 	game._update_solar_notices()
 	assert(not game.feedback.seen.has(forecast))
 	game.solar_phase = "warning"
-	game.solar_clock = game.SOLAR_WARNING - 4.1
+	game.solar_clock = game.SOLAR_WARNING - 5.1
 	game._update_solar_notices()
 	assert(not game.feedback.seen.has(forecast))
 	game.feedback.current_time = 3
-	game.solar_clock = game.SOLAR_WARNING - 4
+	game.solar_clock = game.SOLAR_WARNING - 5
 	game._update_solar_notices()
 	assert(game.feedback.seen.has(forecast) and game.feedback.current_time == 0)
 	game.feedback.active = true
 	game.feedback.tick(0.02)
-	assert(game.feedback.dialogue.text.contains("4 s") and game.feedback.speaker.text == game.feedback.AXIOS)
+	assert(game.feedback.dialogue.text.contains("5 s") and game.feedback.speaker.text == game.feedback.AXIOS)
 	game._update_solar_notices()
 	assert(game.feedback.current_time > 0) # Does not keep interrupting itself.
 	game.feedback.seen.erase(forecast)
@@ -72,4 +72,4 @@ func run(game: Node3D) -> void:
 	game.solar_clock = 0
 	game._apply_location(false)
 	game._update_controls()
-	print("PASS: antenna auto-close/lock/re-enable, radio warning only 4 seconds before fog with preemption/offline gating, growing exposure effect cleared by shelter")
+	print("PASS: antenna auto-close/lock/re-enable, radio warning only 5 seconds before fog with preemption/offline gating, growing exposure effect cleared by shelter")

@@ -31,7 +31,7 @@ func run(game: Node3D) -> void:
 	feedback.transmit("offline_test", "Oculto")
 	assert(feedback.queue.is_empty() and not feedback.seen.has("offline_test"))
 	game.solar_phase = "warning"
-	game.solar_clock = game.SOLAR_WARNING - 4
+	game.solar_clock = game.SOLAR_WARNING - 5
 	var forecast := "solar_warning_%d" % game.solar_cycle
 	feedback.seen.erase(forecast)
 	game._update_solar_notices()

@@ -107,7 +107,7 @@ func _render() -> void:
 	else:
 		_step("ENERGIA E RESERVAS", "Energia gera O₂. Estufa repõe comida. Repare aos 30%.")
 		_step("MANTENHA O SINAL", "Sem comunicação, recursos restantes e avisos ficam ocultos.")
-		_step("NÉVOA SOLAR", "Janela acesa? Fique dentro. Exposição mata em 3 s.")
+		_step("NÉVOA SOLAR", "Janela acesa? Fique dentro. Exposição mata em 5 s.")
 	if page_tween: page_tween.kill()
 	body.modulate.a = 0
 	page_tween = create_tween()

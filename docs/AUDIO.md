@@ -17,6 +17,8 @@ Os efeitos ficam em `scripts/event_audio.gd`, com geração determinística e ca
 
 O ganho nominal da música externa é 0,16 (antes 0,316) e o da base é 0,24. Durante radiação ativa, ambos recebem multiplicador 0,4; após o evento, o volume nominal retorna. A escolha de volume do jogador continua sendo respeitada.
 
+O controle Músicas usa uma escala reduzida: o novo 100% corresponde a ganho 0,8 do teto anterior; o padrão 50% corresponde a ganho 0,4. A interface salva a porcentagem lógica, evitando que 50% vire 40% no controle ao reabrir. Uma migração única aplica o novo padrão também aos perfis antigos; escolhas posteriores são preservadas. Os demais canais mantêm suas escalas.
+
 ## Correção da saída Web
 
 Músicas e efeitos usam explicitamente `AudioServer.PLAYBACK_TYPE_STREAM`, com os quatro canais definidos em `default_bus_layout.tres` antes da inicialização da cena. O caminho anterior de reprodução Sample, combinado com os canais criados em execução, indicava `playing` sem produzir sinal na saída Web. A documentação descreve a escolha entre [Sample e Stream](https://docs.godotengine.org/en/latest/tutorials/audio/audio_streams.html).
