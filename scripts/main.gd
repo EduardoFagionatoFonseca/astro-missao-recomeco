@@ -126,10 +126,17 @@ var hud_root: Control
 var survival_timer: PanelContainer
 var survival_timer_label: Label
 var qa_clock := 0.0
+var guide: Control
+
+func _pressure() -> float:
+	return GameOptions.pressure(float(collected) / TOTAL)
 
 func _ready() -> void:
 	rng.seed = 60318
 	auto_check = "--smoke-test" in OS.get_cmdline_user_args() and not Engine.has_meta("astro_smoke_completed")
+	if auto_check:
+		GameOptions.difficulty = 1
+		TranslationServer.set_locale("pt_BR")
 	capture = "--capture" in OS.get_cmdline_user_args() or "--capture-intro" in OS.get_cmdline_user_args() or "--capture-fog" in OS.get_cmdline_user_args() or "--capture-critical" in OS.get_cmdline_user_args() or "--capture-base" in OS.get_cmdline_user_args() or "--capture-power" in OS.get_cmdline_user_args() or "--capture-signal" in OS.get_cmdline_user_args()
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--capture-"): capture = true
@@ -460,6 +467,7 @@ func _process(delta: float) -> void:
 		load("res://tests/survival_tuning.gd").new().run(self)
 		load("res://tests/terrain_mobile.gd").new().run(self)
 		load("res://tests/radio_resources.gd").new().run(self)
+		load("res://tests/progression_guidance.gd").new().run(self)
 		for i in range(TOTAL): _collect(i)
 		assert(collected == TOTAL and found == GOALS and ship != null)
 		ship_timer = 12.0
@@ -491,6 +499,7 @@ func _process(delta: float) -> void:
 	_update_ship(delta)
 	_update_hud(delta)
 	_update_prompt()
+	guide.update_guide(self, delta)
 
 func _update_movement(delta: float) -> void:
 	var input: Vector2 = (controls.direction() + pad).limit_length()
@@ -642,8 +651,8 @@ func _update_survival(delta: float) -> void:
 	if _at_camp() and energy_ready:
 		oxygen = minf(MAX_RESERVE, oxygen + delta * 25.0)
 	else:
-		oxygen = maxf(0.0, oxygen - delta * OXYGEN_RATE)
-	food = maxf(0.0, food - delta * FOOD_RATE)
+		oxygen = maxf(0.0, oxygen - delta * OXYGEN_RATE * _pressure())
+	food = maxf(0.0, food - delta * FOOD_RATE * _pressure())
 	_update_radiation(delta)
 	_update_last_chance(delta)
 	_update_solar_notices()
@@ -654,7 +663,7 @@ func _update_survival(delta: float) -> void:
 func _update_radiation(delta: float) -> void:
 	var remaining := delta
 	while remaining > 0.00001 and not dead:
-		var duration: float = {"calm": SOLAR_INTERVAL, "warning": SOLAR_WARNING, "active": SOLAR_DURATION}[solar_phase]
+		var duration: float = {"calm": SOLAR_INTERVAL / _pressure(), "warning": SOLAR_WARNING, "active": SOLAR_DURATION}[solar_phase]
 		var step := minf(remaining, maxf(0.0, duration - solar_clock))
 		if solar_phase == "active" and not inside:
 			exposure += step
@@ -678,7 +687,7 @@ func _update_radiation(delta: float) -> void:
 					exposure = 0.0
 					fog_audio.stop()
 					alert_audio.stop()
-	var duration: float = {"calm": SOLAR_INTERVAL, "warning": SOLAR_WARNING, "active": SOLAR_DURATION}[solar_phase]
+	var duration: float = {"calm": SOLAR_INTERVAL / _pressure(), "warning": SOLAR_WARNING, "active": SOLAR_DURATION}[solar_phase]
 	solar_remaining = duration - solar_clock
 	solar_fog.visible = solar_phase == "active" and not inside
 
@@ -980,7 +989,7 @@ func _update_hud(_delta: float) -> void:
 		counts[i].get_parent().get_parent().get_parent().modulate.a = 1.0 if i == 1 or (signal_transmitted and communications_online) else 0.45
 		counts[i].add_theme_color_override("font_color", MINT if found[i] == GOALS[i] else MUTED)
 	oxygen_label.text = "O₂   " + str(ceili(_percent(oxygen))) + "%"
-	food_label.text = "COMIDA   " + str(ceili(_percent(food))) + "%"
+	food_label.text = tr("COMIDA") + "   " + str(ceili(_percent(food))) + "%"
 	oxygen_bar.value = oxygen
 	food_bar.value = food
 	var pulse := 0.5 + 0.5 * sin(elapsed * 3.6)
@@ -1007,13 +1016,14 @@ func _update_survival_timer() -> void:
 	var lines: Array[String] = []
 	if playing and not dead and not won:
 		if solar_phase == "active" and not inside:
-			lines.append("RADIAÇÃO   %.1f s" % maxf(0, EXPOSURE_LIMIT - exposure))
+			lines.append(tr("RADIAÇÃO") + "   %.1f s" % maxf(0, EXPOSURE_LIMIT - exposure))
 		if oxygen <= 0.0 and not (_at_camp() and energy_ready):
 			lines.append("O₂   %.1f s" % (oxygen / OXYGEN_RATE + maxf(0, VITAL_GRACE - oxygen_empty_time)))
 		if food <= 0.0:
-			lines.append("COMIDA   %.1f s" % (food / FOOD_RATE + maxf(0, VITAL_GRACE - food_empty_time)))
+			lines.append(tr("COMIDA") + "   %.1f s" % maxf(0, VITAL_GRACE - food_empty_time))
 	survival_timer.visible = not lines.is_empty()
-	survival_timer_label.text = "\n".join(lines).replace(".", ",")
+	survival_timer_label.text = "\n".join(lines)
+	if GameOptions.language == "pt_BR": survival_timer_label.text = survival_timer_label.text.replace(".", ",")
 	survival_timer.reset_size()
 	var view := get_viewport().get_visible_rect().size
 	survival_timer.position = Vector2((view.x - survival_timer.size.x) / 2, view.y - 170)
@@ -1107,6 +1117,8 @@ func _build_expansion() -> void:
 	hud.add_child(feedback)
 	feedback.typing_tick.connect(func(): event_audio.play("typing"))
 	feedback.transmission_started.connect(func(): event_audio.play("radio"))
+	guide = preload("res://scripts/first_steps.gd").new()
+	hud.add_child(guide)
 	minigames = preload("res://scripts/base_minigames.gd").new()
 	hud.add_child(minigames)
 	minigames.power_repaired.connect(_on_power_repaired)
@@ -1129,6 +1141,10 @@ func _build_expansion() -> void:
 	hud.add_child(outro_video)
 	outro_video.finished.connect(_return_to_menu)
 	intro.configure(material_icons, controls.mobile)
+	GameOptions.language_changed.connect(func():
+		prompt_target = ""
+		intro.configure(material_icons, controls.mobile)
+	)
 	portrait_hint = PanelContainer.new()
 	portrait_hint.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	portrait_hint.add_theme_stylebox_override("panel", _style(Color("101215")))
@@ -1178,13 +1194,19 @@ func _update_controls() -> void:
 		prompt_target = ""
 	base_status.visible = playing and not intro_video.active and not won and not dead
 	power_label.visible = base_status.visible
-	power_label.text = "ENERGIA %d%%" % energy_charge if energy_ready else "ENERGIA OFF / O₂ OFF"
+	power_label.text = tr("ENERGIA %d%%") % energy_charge if energy_ready else "ENERGIA OFF / O₂ OFF"
 	base_status.text = "RÁDIO ONLINE" if communications_online else "RÁDIO OFFLINE"
 
 func _publish_web_test_state() -> void:
 	var forward := camera.global_basis.y.slide(normal).normalized()
 	var right := camera.global_basis.x.slide(normal).normalized()
 	var state := {"normal": [normal.x, normal.y, normal.z], "right": [right.x, right.y, right.z], "forward": [forward.x, forward.y, forward.z], "inside": inside, "hop": hop, "altitude": altitude, "floor": terrain.height_at(normal), "mobile": controls.mobile, "enabled": controls.enabled, "stick": controls.stick_id, "playing": playing, "dead": dead, "oxygen": oxygen, "platform": [terrain.platforms[0].normal.x, terrain.platforms[0].normal.y, terrain.platforms[0].normal.z], "camp": [camp_normal.x, camp_normal.y, camp_normal.z], "position": [avatar.position.x, avatar.position.y, avatar.position.z]}
+	state["language"] = GameOptions.language
+	state["difficulty"] = GameOptions.difficulty
+	state["pressure"] = _pressure()
+	state["guide"] = guide.hint.text if guide.visible else ""
+	state["settings"] = audio_settings.visible
+	state["caption"] = intro_video.caption.text if intro_video.active else ""
 	JavaScriptBridge.eval("window.__astroQA = %s;" % JSON.stringify(state))
 
 func _jump() -> void:
@@ -1223,7 +1245,7 @@ func _update_prompt() -> void:
 		prompt_tween.tween_property(prompt, "modulate:a", 0.0, 0.12)
 		prompt_tween.tween_callback(prompt.hide)
 	else:
-		prompt.text = ("" if controls.mobile else "[E] ") + text
+		prompt.text = ("" if controls.mobile else "[E] ") + tr(text)
 		prompt.show()
 		prompt.pivot_offset = prompt.size / 2
 		prompt.scale = Vector2.ONE * 0.92
@@ -1297,11 +1319,11 @@ func _update_solar_notices() -> void:
 	if not communications_online: return
 	if solar_phase == "warning" and solar_clock >= SOLAR_WARNING - 5:
 		var seconds := ceili(SOLAR_WARNING - solar_clock)
-		feedback.transmit("solar_warning_%d" % solar_cycle, "Radiação em %d s. Entre no abrigo." % seconds, true, feedback.AXIOS, true, true)
+		feedback.transmit("solar_warning_%d" % solar_cycle, tr("Radiação em %d s. Entre no abrigo.") % seconds, true, feedback.AXIOS, true, true)
 
 func _update_energy(delta: float) -> void:
 	if energy_ready:
-		energy_clock += delta
+		energy_clock += delta * _pressure()
 		energy_charge = maxf(0, 100.0 * (1.0 - energy_clock / ENERGY_INTERVAL))
 		if energy_charge <= 30 and not energy_low_announced and communications_online:
 			energy_low_announced = true
@@ -1314,7 +1336,7 @@ func _update_energy(delta: float) -> void:
 			feedback.transmit("power_tutorial", "Energia baixa. Produção de O₂ interrompida.", true, feedback.AXIOS)
 			if minigames.visible and minigames.mode == "signal": minigames.open_signal(false, found[1], signal_transmitted, signal_failures)
 	if communications_online and ship == null:
-		signal_clock += delta
+		signal_clock += delta * _pressure()
 		if signal_clock >= SIGNAL_INTERVAL:
 			communications_online = false
 			signal_transmitted = false
@@ -1465,4 +1487,4 @@ func _assert_survival() -> void:
 	fog_audio.stop()
 	alert_audio.stop()
 	_resource_warnings()
-	print("PASS: larger reserves, recovery, grace/death, planet-wide fog, five-second exposure and interior protection")
+	print("PASS: larger reserves, recovery, grace/death, planet-wide fog, three-second exposure and interior protection")

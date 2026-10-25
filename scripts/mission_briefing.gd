@@ -84,7 +84,7 @@ func _render() -> void:
 	for child in body.get_children():
 		body.remove_child(child)
 		child.queue_free()
-	page_label.text = "GUIA DA MISSÃO   /   %d DE 2" % (page_index + 1)
+	page_label.text = tr("GUIA DA MISSÃO   /   %d DE 2") % (page_index + 1)
 	title_label.text = "Explore. Reúna. Sobreviva." if page_index == 0 else "Seu abrigo mantém você vivo."
 	back_button.visible = page_index == 1
 	next_button.text = "PRÓXIMO  >" if page_index == 0 else "COMEÇAR"
@@ -104,10 +104,11 @@ func _render() -> void:
 			row.add_child(icon)
 			_text(row, ["5 pedras", "6 peças", "8 combustíveis"][i], 28)
 		_step("DEPOIS, O RESGATE", "O sinal revela pedras e combustível. Reúna tudo para partir.")
+		_text(body, "A coleta aumenta o desafio. As setas ajudam nas primeiras ações.", 24, Color("adb4b8"))
 	else:
 		_step("ENERGIA E RESERVAS", "Energia gera O₂. Estufa repõe comida. Repare aos 30%.")
 		_step("MANTENHA O SINAL", "Sem comunicação, recursos restantes e avisos ficam ocultos.")
-		_step("NÉVOA SOLAR", "Janela acesa? Fique dentro. Exposição mata em 5 s.")
+		_step("NÉVOA SOLAR", "Janela acesa? Fique dentro. Exposição mata em 3 s.")
 	if page_tween: page_tween.kill()
 	body.modulate.a = 0
 	page_tween = create_tween()

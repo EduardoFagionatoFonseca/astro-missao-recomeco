@@ -2,6 +2,10 @@
 
 Uma miniaventura cozy 3D no Godot 4.7.2. Isolado em Marte, explore o planeta, mantenha o abrigo funcionando e transmita sua localização para sua tripulação voltar. Inclui exportação para navegador e controles de celular.
 
+Escolha **Fácil, Médio ou Difícil** antes de começar. O consumo de reservas e a frequência de panes/radiação usam multiplicadores de 0,8 / 1 / 1,2, acrescidos gradualmente de até 35% conforme os 19 itens são coletados. A janela de aviso solar de 5 s e a resistência de 3 s permanecem constantes. Setas animadas orientam as duas primeiras peças de antena e a primeira necessidade de oxigênio, comida, energia, transmissão e abrigo solar. Após resolver cada necessidade, sua seta não reaparece naquela partida.
+
+Nas configurações, **Português / English** altera menus, guia, HUD, minigames, mensagens e legendas dos vídeos inicial/final. Os vídeos originais não têm fala nem textos gravados na imagem; usam legendas traduzidas. Idioma e dificuldade ficam salvos entre sessões.
+
 ## Jogar
 
 No Windows, abra **Jogar.cmd**. O iniciador usa o Godot instalado na pasta Downloads deste computador, no PATH ou na variável `GODOT_EXE`. Para editar, importe `project.godot` no Godot 4.7 e pressione F5. Não há dependências de rede ou plugins.

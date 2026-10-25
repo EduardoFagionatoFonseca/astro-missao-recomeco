@@ -1,5 +1,7 @@
 # Validação das features
 
+`tests/progression_guidance.gd` verifica os três modos, aumento gradual do consumo com a coleta, primeira orientação para O₂/comida/energia/sinal/radiação e legendas em inglês. `tests/web_options.cjs` percorre menu, seletor de idioma, vídeo e primeira seta no desktop e Pixel 7 emulado, incluindo persistência após recarregar. O aviso de radiação mantém os 5 s; tolerâncias de radiação, fome e O₂ são de 3 s. As contagens de reservas aparecem apenas quando as barras zeram.
+
 Base: main `f9259e0`. Ambiente: Windows, Godot 4.7.2, Chrome. Capturas geradas pelo jogo e pelo export web.
 
 ## Automação
