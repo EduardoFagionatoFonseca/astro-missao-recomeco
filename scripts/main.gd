@@ -879,6 +879,9 @@ func _build_ui() -> void:
 		column.add_child(count_label)
 		column.add_child(_label(names[i], 20, MUTED))
 	var mute_button := _button("Som", func(): audio_settings.open())
+	mute_button.text = ""
+	mute_button.icon = preload("res://assets/ui/gear.svg")
+	mute_button.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	mute_ui = mute_button
 	mute_button.position = Vector2(1268, 817)
 	mute_button.custom_minimum_size.x = 54
@@ -1169,7 +1172,7 @@ func _build_expansion() -> void:
 func _layout_ui() -> void:
 	var view := get_viewport().get_visible_rect().size
 	objectives_ui.position = Vector2(view.x - 810, 28)
-	mute_ui.position = Vector2(view.x - 138, 160)
+	mute_ui.position = Vector2(view.x - 118, 160)
 	mute_ui.custom_minimum_size = Vector2(100, 72)
 	prompt.position = Vector2((view.x - 450) / 2, view.y - 112)
 	for modal in [death_panel]: _center_modal(modal)
@@ -1205,6 +1208,9 @@ func _publish_web_test_state() -> void:
 	state["difficulty"] = GameOptions.difficulty
 	state["pressure"] = _pressure()
 	state["guide"] = guide.hint.text if guide.visible else ""
+	state["objective"] = guide.objective_id
+	state["route_points"] = guide.route.size()
+	state["logical_size"] = [get_viewport().get_visible_rect().size.x, get_viewport().get_visible_rect().size.y]
 	state["settings"] = audio_settings.visible
 	state["caption"] = intro_video.caption.text if intro_video.active else ""
 	JavaScriptBridge.eval("window.__astroQA = %s;" % JSON.stringify(state))

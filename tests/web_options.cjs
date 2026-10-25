@@ -25,6 +25,23 @@ const {chromium, devices} = require(process.env.PLAYWRIGHT_MODULE || 'playwright
         await page.waitForTimeout(200);
       };
       await load();
+      const verifyResolution = async () => {
+        await page.waitForTimeout(400);
+        const metrics = await page.evaluate(()=>{
+          const c=document.querySelector('canvas'),r=c.getBoundingClientRect();
+          return {w:c.width,h:c.height,rw:r.width,rh:r.height,dpr:devicePixelRatio,vw:visualViewport.width,vh:visualViewport.height};
+        });
+        assert.ok(Math.abs(metrics.w-metrics.rw*metrics.dpr)<2,JSON.stringify(metrics));
+        assert.ok(Math.abs(metrics.h-metrics.rh*metrics.dpr)<2,JSON.stringify(metrics));
+        assert.ok(metrics.rw<=metrics.vw+1 && metrics.rh<=metrics.vh+1,JSON.stringify(metrics));
+      };
+      await verifyResolution();
+      if(mobile) {
+        for(const viewport of [{width:568,height:320},{width:844,height:335},{width:844,height:390},{width:412,height:915},{width:915,height:412}]) {
+          await page.setViewportSize(viewport);
+          await verifyResolution();
+        }
+      }
       await click(955,700); // Hard.
       await page.waitForFunction(()=>window.__astroQA.difficulty===2);
       await click(1074,795); // Settings.
@@ -47,6 +64,7 @@ const {chromium, devices} = require(process.env.PLAYWRIGHT_MODULE || 'playwright
       await click(900,765);
       await page.waitForFunction(()=>window.__astroQA.playing);
       await page.waitForFunction(()=>window.__astroQA.guide==='Gather parts');
+      await page.waitForFunction(()=>window.__astroQA.route_points>1);
       await page.screenshot({path:`.runtime/${mobile?'mobile':'desktop'}-guidance.png`});
       assert.equal(errors.length,0,errors.join('\n'));
       await page.waitForTimeout(600);

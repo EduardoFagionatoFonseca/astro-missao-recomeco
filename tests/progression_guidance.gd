@@ -36,16 +36,16 @@ func run(game: Node3D) -> void:
 	guide.started.clear()
 	game.oxygen = 20
 	guide.update_guide(game, 0)
-	assert(guide.visible and guide.caption == "Volte ao abrigo")
+	assert(guide.visible and guide.objective_id == "oxygen")
 	game.oxygen = game.MAX_RESERVE
 	guide.update_guide(game, 0)
 	assert(guide.done.has("oxygen"))
 	game.oxygen = 20
 	guide.update_guide(game, 0)
-	assert(guide.caption != "Volte ao abrigo" or not guide.visible)
+	assert(guide.objective_id != "oxygen")
 	game.food = 20
 	guide.update_guide(game, 0)
-	assert(guide.caption == "Vá à estufa")
+	assert(guide.objective_id == "food")
 	game.food = game.MAX_RESERVE
 	guide.update_guide(game, 0)
 	assert(guide.done.has("food"))
@@ -83,6 +83,35 @@ func run(game: Node3D) -> void:
 	game.intro_video.player.stop()
 	game.intro_video.hide()
 	TranslationServer.set_locale("pt_BR")
+	# One active need, preempted as the relative urgency changes.
+	guide.done.clear()
+	guide.started.clear()
+	game.oxygen = 20
+	game.food = 10
+	guide.update_guide(game, 0)
+	assert(guide.objective_id == "food")
+	game.oxygen = 5
+	guide.update_guide(game, 0)
+	assert(guide.objective_id == "oxygen")
+	game.oxygen = game.MAX_RESERVE
+	guide.update_guide(game, 0)
+	assert(guide.objective_id == "food")
+	game.food = game.MAX_RESERVE
+	guide.update_guide(game, 0)
+	for level in [1, 2]:
+		options.difficulty = level
+		game.oxygen = 5
+		game.food = game.MAX_RESERVE
+		guide.update_guide(game, 0)
+		assert(guide.objective_id != "oxygen")
+	options.difficulty = 0
+	guide.update_guide(game, 0)
+	assert(guide.objective_id == "oxygen")
+	game.oxygen = game.MAX_RESERVE
+	guide.update_guide(game, 0)
+	game.oxygen = 5
+	guide.update_guide(game, 0)
+	assert(guide.objective_id == "oxygen")
 	options.difficulty = before
 	game.oxygen = game.MAX_RESERVE
 	game.food = game.MAX_RESERVE
