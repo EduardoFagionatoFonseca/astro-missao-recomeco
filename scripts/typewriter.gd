@@ -8,9 +8,12 @@ var length := 0
 
 func begin(target: Label, text: String) -> void:
 	label = target
-	label.text = text
+	var parts := text.split("\n")
+	for i in range(parts.size()): parts[i] = str(TranslationServer.translate(parts[i]))
+	var translated := "\n".join(parts)
+	label.text = translated
 	label.visible_characters = 0
-	length = text.length()
+	length = translated.length()
 	progress = 0
 	sound_clock = 0
 

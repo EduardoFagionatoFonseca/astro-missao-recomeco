@@ -13,6 +13,13 @@ try {
     if ($LASTEXITCODE -ne 0) { throw "Falha na importação do projeto." }
     & $GodotPath --headless --path . --export-release Web build/web/index.html
     if ($LASTEXITCODE -ne 0) { throw "Falha na exportação web." }
+    # O servidor local de testes é HTTP simples e não fornece COOP/COEP.
+    # A build sem threads não precisa de isolamento de origem, então mantenha
+    # o pacote compatível com localhost, GitHub Pages e hospedagem estática.
+    $indexPath = Join-Path $projectRoot "build/web/index.html"
+    $indexHtml = Get-Content -LiteralPath $indexPath -Raw
+    $indexHtml = $indexHtml.Replace('"ensureCrossOriginIsolationHeaders":true', '"ensureCrossOriginIsolationHeaders":false')
+    Set-Content -LiteralPath $indexPath -Value $indexHtml -Encoding utf8
     $webFiles = Get-ChildItem -LiteralPath "build/web" -File | Where-Object { $_.Extension -ne ".import" }
     Compress-Archive -LiteralPath $webFiles.FullName -DestinationPath "build/astro-web.zip" -Force
     Write-Output "Jogo exportado: build/web/index.html"

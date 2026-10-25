@@ -38,6 +38,20 @@ func _ready() -> void:
 	var stack := VBoxContainer.new()
 	stack.add_theme_constant_override("separation", 14)
 	actions.add_child(stack)
+	var levels := HBoxContainer.new()
+	levels.alignment = BoxContainer.ALIGNMENT_CENTER
+	levels.add_theme_constant_override("separation", 14)
+	stack.add_child(levels)
+	var group := ButtonGroup.new()
+	for i in range(3):
+		var level := Button.new()
+		level.text = ["FÁCIL", "MÉDIO", "DIFÍCIL"][i]
+		level.custom_minimum_size = Vector2(220, 68)
+		level.toggle_mode = true
+		level.button_group = group
+		level.button_pressed = GameOptions.difficulty == i
+		level.pressed.connect(GameOptions.set_difficulty.bind(i))
+		levels.add_child(level)
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 18)
 	stack.add_child(row)

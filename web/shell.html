@@ -7,8 +7,8 @@
   <title>Astro · Um Pequeno Recomeço</title>
   <style>
     html,body { margin:0; width:100%; height:100%; overflow:hidden; background:#102334; color:#f0e9d9; font:18px system-ui,sans-serif; overscroll-behavior:none }
-    #game { position:fixed; top:env(safe-area-inset-top,0px); right:env(safe-area-inset-right,0px); bottom:env(safe-area-inset-bottom,0px); left:env(safe-area-inset-left,0px) }
-    canvas { display:block; width:100%; height:100%; touch-action:none; outline:none }
+    #game { position:fixed; top:0; left:0; width:100vw; height:100dvh; box-sizing:border-box; padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px) }
+    canvas { display:block; width:100% !important; height:100% !important; touch-action:none; outline:none }
     #status { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:20px; padding:28px; background:#102334; text-align:center }
     progress { width:min(360px,80vw); accent-color:#b7d8bf }
     #error { max-width:600px; line-height:1.6 }
@@ -27,10 +27,31 @@
     const canvas = document.getElementById('canvas');
     const area = document.getElementById('game');
     function resize() {
-      canvas.width = Math.max(1, area.clientWidth);
-      canvas.height = Math.max(1, area.clientHeight);
+      const viewport = window.visualViewport;
+      area.style.width = (viewport ? viewport.width : window.innerWidth) + 'px';
+      area.style.height = (viewport ? viewport.height : window.innerHeight) + 'px';
+      area.style.left = (viewport ? viewport.offsetLeft : 0) + 'px';
+      area.style.top = (viewport ? viewport.offsetTop : 0) + 'px';
+      const rect = canvas.getBoundingClientRect();
+      const ratio = window.devicePixelRatio || 1;
+      const width = Math.max(1, Math.round(rect.width * ratio));
+      const height = Math.max(1, Math.round(rect.height * ratio));
+      if (canvas.width !== width) canvas.width = width;
+      if (canvas.height !== height) canvas.height = height;
     }
-    new ResizeObserver(resize).observe(area);
+    let resizeFrame = 0;
+    function scheduleResize() {
+      cancelAnimationFrame(resizeFrame);
+      resizeFrame = requestAnimationFrame(resize);
+    }
+    new ResizeObserver(scheduleResize).observe(area);
+    window.addEventListener('resize', scheduleResize);
+    window.addEventListener('orientationchange', scheduleResize);
+    document.addEventListener('fullscreenchange', scheduleResize);
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', scheduleResize);
+      window.visualViewport.addEventListener('scroll', scheduleResize);
+    }
     resize();
     canvas.addEventListener('contextmenu', event => event.preventDefault());
     canvas.addEventListener('touchmove', event => event.preventDefault(), {passive:false});
@@ -42,6 +63,7 @@
         if (total > 0) { bar.max = total; bar.value = current; }
       }
     }).then(() => {
+      scheduleResize();
       document.getElementById('status').style.display = 'none';
       canvas.focus();
     }).catch(error => {

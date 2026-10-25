@@ -33,7 +33,7 @@ func _ready() -> void:
 	panel.add_theme_stylebox_override("panel", preload("res://scripts/ui_theme.gd").box(Color("171c23"), Color("4b5862"), 36))
 	add_child(panel)
 	var body := VBoxContainer.new()
-	body.add_theme_constant_override("separation", 18)
+	body.add_theme_constant_override("separation", 12)
 	panel.add_child(body)
 	_label(body, "CONFIGURAÇÕES", 22, Color("bad3a7"))
 	_label(body, "Som do seu jeito.", 42)
@@ -47,15 +47,26 @@ func _ready() -> void:
 		slider.min_value = 0
 		slider.max_value = 100
 		slider.step = 1
-		slider.custom_minimum_size = Vector2(840, 44)
+		slider.custom_minimum_size = Vector2(840, 36)
 		slider.value = roundf(float(volumes[BUSES[i]]) * 100)
 		values[i].text = "%d%%" % slider.value
 		slider.value_changed.connect(func(value: float): _set_volume(BUSES[i], value / 100); values[i].text = "%d%%" % value)
 		sliders.append(slider)
 		body.add_child(slider)
+	var language_row := HBoxContainer.new()
+	body.add_child(language_row)
+	var language_title := _label(language_row, "IDIOMA", 25)
+	language_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var language_select := OptionButton.new()
+	language_select.add_item("Português")
+	language_select.add_item("English")
+	language_select.selected = 1 if GameOptions.language == "en" else 0
+	language_select.custom_minimum_size = Vector2(320, 64)
+	language_select.item_selected.connect(func(index: int): GameOptions.set_language("en" if index == 1 else "pt_BR"))
+	language_row.add_child(language_select)
 	var close_button := Button.new()
 	close_button.text = "PRONTO"
-	close_button.custom_minimum_size.y = 96
+	close_button.custom_minimum_size.y = 76
 	close_button.pressed.connect(close)
 	body.add_child(close_button)
 	get_viewport().size_changed.connect(_layout)

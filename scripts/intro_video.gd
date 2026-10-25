@@ -75,7 +75,7 @@ func begin(muted: bool, departure := false) -> void:
 	clip_duration = 14.0 if departure else DURATION
 	captions = ["Você conseguiu voltar.", "Marte ficou para trás.", "Nenhuma missão termina sozinha."] if departure else CAPTIONS
 	clip_path = "res://assets/cinematics/outro.ogv" if departure else "res://assets/cinematics/intro.ogv"
-	caption.text = captions[0]
+	caption.text = tr(captions[0])
 	fallback = not ResourceLoader.exists(clip_path)
 	if not fallback:
 		player.stream = load(clip_path)
@@ -91,7 +91,7 @@ func _process(delta: float) -> void:
 	if clock > 4.0 and time < 0.1:
 		fallback = true
 		player.stop()
-	caption.text = captions[mini(captions.size() - 1, int(time / (clip_duration / captions.size())))]
+	caption.text = tr(captions[mini(captions.size() - 1, int(time / (clip_duration / captions.size())))])
 	if clock >= clip_duration + 3 or (fallback and clock >= clip_duration): _finish()
 
 func _unhandled_key_input(event: InputEvent) -> void:

@@ -148,7 +148,7 @@ func open_power(already_ready: bool) -> void:
 func _select_source(index: int) -> void:
 	if completed or frozen or connected[index]: return
 	selected = index
-	message.text = "Conecte o destino %s." % SYMBOLS[index].left(1)
+	message.text = tr("Conecte o destino %s.") % SYMBOLS[index].left(1)
 	_refresh_connections()
 
 func _select_target(index: int) -> void:
@@ -163,7 +163,7 @@ func _select_target(index: int) -> void:
 		return
 	connected[index] = true
 	selected = -1
-	message.text = "%d/3 circuitos conectados." % connected.count(true)
+	message.text = tr("%d/3 circuitos conectados.") % connected.count(true)
 	_refresh_connections()
 	if connected.count(true) == 3:
 		completed = true
@@ -173,7 +173,7 @@ func _select_target(index: int) -> void:
 func _refresh_connections() -> void:
 	for i in range(sources.size()):
 		sources[i].disabled = connected[i]
-		sources[i].text = ("OK " if connected[i] else "> " if selected == i else "") + SYMBOLS[i]
+		sources[i].text = ("OK " if connected[i] else "> " if selected == i else "") + tr(SYMBOLS[i])
 	if is_instance_valid(diagram): diagram.queue_redraw()
 
 func open_signal(power: bool, parts: int, sent: bool, revision := 0) -> void:
@@ -182,7 +182,7 @@ func open_signal(power: bool, parts: int, sent: bool, revision := 0) -> void:
 	mode = "signal"
 	_text("ANTENA", 32, Color("92bde0"))
 	if not power or parts < 6 or sent:
-		_text("Sinal ativo." if sent else "Repare a energia." if not power else "Antena: %d/6 peças." % parts)
+		_text("Sinal ativo." if sent else "Repare a energia." if not power else tr("Antena: %d/6 peças.") % parts)
 		body.add_child(_button("VOLTAR", close))
 		completed = true
 		return
@@ -230,7 +230,7 @@ func _process(delta: float) -> void:
 	scope.queue_redraw()
 	hold_time = minf(3.0, hold_time + delta) if quality >= 92 else 0.0
 	stability.value = hold_time / 3.0 * 100
-	message.text = "Sinal %d%%  /  %s" % [quality, "Transmitindo… %.1f / 3 s" % hold_time if quality >= 92 else "Ajuste até estabilizar"]
+	message.text = tr("Sinal %d%%  /  %s") % [quality, tr("Transmitindo… %.1f / 3 s") % hold_time if quality >= 92 else tr("Ajuste até estabilizar")]
 	if hold_time >= 3.0:
 		completed = true
 		message.text = "SINAL RESTAURADO"

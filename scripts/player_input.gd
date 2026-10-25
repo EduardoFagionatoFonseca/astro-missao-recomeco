@@ -108,6 +108,7 @@ func _draw() -> void:
 	_draw_button(jump_rect, "Saltar", Color("b7d8bfdd") if jump_available else Color("a3b7c455"))
 
 func _draw_button(rect: Rect2, text: String, color: Color) -> void:
+	text = tr(text)
 	var style := StyleBoxFlat.new()
 	style.bg_color = Color("191c21ef")
 	style.border_color = color

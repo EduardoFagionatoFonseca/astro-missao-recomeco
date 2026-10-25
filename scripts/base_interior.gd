@@ -104,7 +104,7 @@ func station_at(at: Vector3) -> String:
 	return ""
 
 func set_power(ready: bool, charge: float) -> void:
-	status.text = "O₂ ONLINE / %d%%" % charge if ready else "O₂ OFFLINE"
+	status.text = tr("O₂ ONLINE / %d%%") % charge if ready else "O₂ OFFLINE"
 	for light in lights:
 		light.material_override.albedo_color = Color("b7d8bf") if ready else Color("f2ba90")
 

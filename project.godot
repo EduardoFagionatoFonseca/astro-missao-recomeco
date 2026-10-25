@@ -1,5 +1,8 @@
 config_version=5
 
+[autoload]
+GameOptions="*res://scripts/game_options.gd"
+
 [application]
 config/name="Astro · Um Pequeno Recomeço"
 run/main_scene="res://scenes/main.tscn"

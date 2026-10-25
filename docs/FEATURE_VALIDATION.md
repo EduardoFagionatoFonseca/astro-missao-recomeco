@@ -1,5 +1,9 @@
 # Validação das features
 
+Orientação contextual: `tests/progression_guidance.gd` verifica a troca de prioridade entre comida e O₂, um único objetivo ativo, ausência de repetição em médio/difícil e repetição no fácil. A rota projetada começa no astronauta e segue a superfície sem atravessar o planeta. `tests/web_options.cjs` verifica a resolução física do canvas contra CSS × DPR, redimensionamento entre 568×320 / 844×335 / 844×390, retrato e retorno a 915×412, além de confirmar uma rota desenhada. Ações mobile continuam usando as coordenadas do canvas e áreas seguras.
+
+`tests/progression_guidance.gd` verifica os três modos, aumento gradual do consumo com a coleta, primeira orientação para O₂/comida/energia/sinal/radiação e legendas em inglês. `tests/web_options.cjs` percorre menu, seletor de idioma, vídeo e primeira seta no desktop e Pixel 7 emulado, incluindo persistência após recarregar. O aviso de radiação mantém os 5 s; tolerâncias de radiação, fome e O₂ são de 3 s. As contagens de reservas aparecem apenas quando as barras zeram.
+
 Base: main `f9259e0`. Ambiente: Windows, Godot 4.7.2, Chrome. Capturas geradas pelo jogo e pelo export web.
 
 ## Automação
