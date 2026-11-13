@@ -1,5 +1,7 @@
 extends Control
 signal visibility_updated
+signal menu_requested
+var menu_button: Button
 const BUSES := ["Master", "Music", "Interactions", "Alerts"]
 const NAMES := ["GERAL", "MÚSICAS", "INTERAÇÕES", "AVISOS"]
 const MUSIC_MAX_GAIN := 0.8
@@ -64,11 +66,36 @@ func _ready() -> void:
 	language_select.custom_minimum_size = Vector2(320, 64)
 	language_select.item_selected.connect(func(index: int): GameOptions.set_language("en" if index == 1 else "pt_BR"))
 	language_row.add_child(language_select)
+	var camera_row := HBoxContainer.new()
+	body.add_child(camera_row)
+	var camera_title := _label(camera_row, "CÂMERA EXTERNA", 25)
+	camera_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var camera_select := OptionButton.new()
+	camera_select.add_item(tr("Exploração (original)"))
+	camera_select.add_item(tr("Atrás do astronauta (teste)"))
+	camera_select.selected = int(GameOptions.chase_camera)
+	camera_select.custom_minimum_size = Vector2(440, 58)
+	camera_select.item_selected.connect(func(index: int): GameOptions.set_chase_camera(index == 1))
+	GameOptions.language_changed.connect(func():
+		camera_select.set_item_text(0, tr("Exploração (original)"))
+		camera_select.set_item_text(1, tr("Atrás do astronauta (teste)"))
+	)
+	camera_row.add_child(camera_select)
+	var actions := HBoxContainer.new()
+	actions.add_theme_constant_override("separation", 14)
+	body.add_child(actions)
+	menu_button = Button.new()
+	menu_button.text = "Voltar ao menu principal"
+	menu_button.tooltip_text = "Encerra a missão atual"
+	menu_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	menu_button.pressed.connect(func(): menu_requested.emit())
+	actions.add_child(menu_button)
 	var close_button := Button.new()
+	close_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	close_button.text = "PRONTO"
 	close_button.custom_minimum_size.y = 76
 	close_button.pressed.connect(close)
-	body.add_child(close_button)
+	actions.add_child(close_button)
 	get_viewport().size_changed.connect(_layout)
 	panel.resized.connect(_layout)
 	_layout()
@@ -94,6 +121,8 @@ func _save_volumes() -> void:
 	config.save("user://audio.cfg")
 
 func open() -> void:
+	menu_button.visible = get_tree().current_scene.playing
+	panel.reset_size()
 	show()
 	_layout()
 	visibility_updated.emit()
@@ -103,7 +132,9 @@ func close() -> void:
 	visibility_updated.emit()
 
 func _layout() -> void:
-	panel.position = (get_viewport_rect().size - panel.size) / 2
+	var view := get_viewport_rect().size
+	panel.scale = Vector2.ONE * minf(1.0, minf((view.x - 40.0) / maxf(panel.size.x, 1.0), (view.y - 40.0) / maxf(panel.size.y, 1.0)))
+	panel.position = (view - panel.size * panel.scale) / 2
 
 func _unhandled_key_input(event: InputEvent) -> void:
 	if visible and event.is_action_pressed("ui_cancel"):

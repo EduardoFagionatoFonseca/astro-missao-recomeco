@@ -247,8 +247,17 @@ func _build_items() -> void:
 		var kind := 1 if i < game.GOALS[1] else 0 if i < game.GOALS[1] + game.GOALS[0] else 2
 		var visual := Node3D.new()
 		root.add_child(visual)
+		var photo := i - int(game.GOALS[1]) if kind == 0 else -1
 		if kind == 0:
-			_asset("rock_largeA", visual, 0.45)
+			_box(visual, Vector3(0.62, 0.44, 0.07), Color("242f39"), Vector3(0, 0.48, 0))
+			var card := QuadMesh.new()
+			card.size = Vector2(0.54, 0.35)
+			var image := _mesh(visual, card, Color.WHITE, Vector3(0, 0.48, 0.04))
+			var surface := StandardMaterial3D.new()
+			surface.albedo_texture = preload("res://scripts/ui/mars_archive.gd").PHOTOS[photo]
+			surface.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+			surface.cull_mode = BaseMaterial3D.CULL_DISABLED
+			image.material_override = surface
 		elif kind == 1:
 			_box(visual, Vector3(0.34, 0.42, 0.28), game.MINT, Vector3(0, 0.23, 0))
 			_box(visual, Vector3(0.36, 0.1, 0.3), Color("607c77"), Vector3(0, 0.28, 0))
@@ -264,5 +273,5 @@ func _build_items() -> void:
 		var ring := _mesh(root, ring_mesh, [game.PEACH, game.MINT, Color("dfcc97")][kind], Vector3(0, 0.08, 0))
 		var marker := _ball(root, 0.065, [game.PEACH, game.MINT, Color("dfcc97")][kind], Vector3(0, 1.1, 0))
 		marker.material_override = _material([game.PEACH, game.MINT, Color("dfcc97")][kind], 0.5)
-		game.items.append({"node": root, "normal": n, "visual": visual, "marker": marker, "ring": ring, "kind": kind, "taken": false})
+		game.items.append({"node": root, "normal": n, "visual": visual, "marker": marker, "ring": ring, "kind": kind, "photo": photo, "taken": false})
 	game._sync_resource_visibility()

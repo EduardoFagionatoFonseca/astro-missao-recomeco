@@ -4,7 +4,6 @@ var done: Dictionary = {}
 var started: Dictionary = {}
 var caption := ""
 var objective_id := ""
-var clock := 0.0
 var game: Node3D
 var hint: Label
 var route := PackedVector2Array()
@@ -26,9 +25,8 @@ func _ready() -> void:
 func _process(_delta: float) -> void:
 	if game != null and (not game.playing or game.dead or game.won or not game.controls.enabled): hide()
 
-func update_guide(state: Node3D, delta: float) -> void:
+func update_guide(state: Node3D, _delta: float) -> void:
 	game = state
-	clock += delta
 	hide()
 	objective_id = ""
 	route.clear()
@@ -36,14 +34,14 @@ func update_guide(state: Node3D, delta: float) -> void:
 	var continuous := GameOptions.difficulty == 0
 	var oxy: float = game.oxygen / game.MAX_RESERVE * 100
 	var food: float = game.food / game.MAX_RESERVE * 100
-	var onboarding: bool = game.found[1] >= 2
+	var reserve_threshold := 30.0 if continuous else 25.0
 	var needs := {
-		"oxygen": oxy <= 25 or (onboarding and oxy < 80 and not done.has("oxygen")),
-		"food": food <= 25 or (onboarding and food < 80 and not done.has("food")),
+		"oxygen": oxy <= reserve_threshold and not (game._at_camp() and game.energy_ready),
+		"food": food <= reserve_threshold,
 		"energy": game.energy_charge <= 30,
-		"signal": not game.communications_online or (game.found[1] >= 6 and not game.signal_transmitted),
+		"signal": not game.communications_online or (game.found[1] >= game.GOALS[1] and not game.signal_transmitted),
 		"solar": game.solar_phase == "active" or (game.solar_phase == "warning" and game.communications_online and game.solar_clock >= game.SOLAR_WARNING - 5),
-		"parts": game.found[1] < (6 if continuous else 2)
+		"parts": game.found[1] < (game.GOALS[1] if continuous else 2)
 	}
 	var resolved := {"oxygen": oxy >= 80, "food": food >= 80, "energy": game.energy_charge > 90, "signal": game.signal_transmitted and game.communications_online, "solar": game.inside or game.solar_phase == "calm", "parts": not needs.parts}
 	for key in needs:
@@ -63,10 +61,10 @@ func update_guide(state: Node3D, delta: float) -> void:
 			best = priorities[key]
 			objective_id = key
 	if objective_id.is_empty() and continuous:
-		if game.found[1] >= 6 and game.communications_online and game.signal_transmitted and game.collected < game.TOTAL: objective_id = "supplies"
+		if game.found[1] >= game.GOALS[1] and game.communications_online and game.signal_transmitted and game.collected < game.TOTAL: objective_id = "supplies"
 		elif game.collected >= game.TOTAL: objective_id = "rescue"
 	if objective_id.is_empty(): return
-	caption = {"solar": "Entre no abrigo", "oxygen": "Recupere oxigênio", "energy": "Repare a energia", "food": "Encontre comida", "signal": "Restaure o sinal", "parts": "Reúna peças", "supplies": "Reúna suprimentos", "rescue": "Aguarde no abrigo"}[objective_id]
+	caption = {"solar": "Entre no abrigo", "oxygen": "Recupere oxigênio", "energy": "Repare a energia", "food": "Encontre comida", "signal": "Restaure o sinal", "parts": "Reúna peças", "supplies": "Reúna fotos e combustível", "rescue": "Aguarde a nave"}[objective_id]
 	destination = game.camp_normal * game.R
 	if objective_id == "food":
 		destination = game.base_room.position + game.base_room.station_positions["exit"] if game.inside else game.garden_normal * game.R
@@ -96,31 +94,53 @@ func _build_route() -> void:
 	var camera: Camera3D = game.camera
 	var origin: Vector3 = game.avatar.global_position
 	if origin.distance_to(destination) < 0.7: return
+	var avatar_up: Vector3 = Vector3.UP if game.inside else game.normal
+	var feet := camera.unproject_position(origin)
+	var helmet := camera.unproject_position(origin + avatar_up * 1.85)
+	var player_bounds := Rect2(feet, Vector2.ZERO).expand(helmet).grow(maxf(12.0, feet.distance_to(helmet) * 0.42))
 	if game.inside:
-		for i in range(25): route.append(camera.unproject_position(origin.lerp(destination, i / 24.0) + Vector3.UP * 0.12))
+		for i in range(1, 33):
+			var point := origin.lerp(destination, i / 32.0) + Vector3.UP * 0.1
+			if camera.is_position_behind(point): break
+			if not _append_route_point(camera.unproject_position(point), player_bounds): break
 	else:
 		var target := destination.normalized()
 		if game.normal.angle_to(target) < 0.01: return
 		# Follow the ground and stop at the horizon, never through the planet.
-		for i in range(65):
-			var direction: Vector3 = game.normal.slerp(target, i / 64.0).normalized()
+		var angle: float = game.normal.angle_to(target)
+		var tangent: Vector3 = target.slide(game.normal).normalized()
+		if tangent.is_zero_approx(): tangent = game.north
+		var steps := maxi(2, ceili(angle * game.R / 0.40))
+		for i in range(1, steps + 1):
+			var along := angle * float(i) / steps
+			var direction: Vector3 = game.normal * cos(along) + tangent * sin(along)
 			var world: Vector3 = direction * (game.R + game.terrain.height_at(direction) + 0.2)
-			if i == 0: world = origin + game.normal * 0.12
 			if i > 1 and direction.dot((camera.global_position - world).normalized()) < 0.12: break
 			if camera.is_position_behind(world): break
-			route.append(camera.unproject_position(world))
+			if not _append_route_point(camera.unproject_position(world), player_bounds): break
+
+func _append_route_point(point: Vector2, player_bounds: Rect2) -> bool:
+	if not game.first_person or game.inside:
+		if player_bounds.has_point(point): return route.is_empty()
+		if not route.is_empty():
+			var start := route[-1]
+			var corner := player_bounds.position
+			var end := player_bounds.end
+			var edges := [corner, Vector2(end.x, corner.y), end, Vector2(corner.x, end.y)]
+			for i in range(edges.size()):
+				if Geometry2D.segment_intersects_segment(start, point, edges[i], edges[(i + 1) % edges.size()]) != null: return false
+	route.append(point)
+	return true
 
 func _draw() -> void:
 	if route.size() < 2: return
-	draw_polyline(route, Color("101c3099"), 10, true)
-	draw_polyline(route, Color("b7d8bfc9"), 4, true)
-	var distance := fmod(clock * 32, 56.0)
-	for i in range(1, route.size()):
-		var previous := distance
-		distance += route[i].distance_to(route[i - 1])
-		if floori(distance / 56) > floori(previous / 56) and i < route.size() - 4:
-			_draw_head(route[i], (route[i] - route[i - 1]).normalized(), 8)
-	_draw_head(route[-1], (route[-1] - route[-2]).normalized(), 17)
+	draw_polyline(route, Color("101c30cc"), 9, true)
+	draw_polyline(route, Color("b7d8bfe0"), 3, true)
+	var end := route[-1]
+	for i in range(route.size() - 2, -1, -1):
+		if end.distance_to(route[i]) >= 24.0:
+			_draw_head(end, (end - route[i]).normalized(), 14)
+			break
 
 func _draw_head(at: Vector2, direction: Vector2, length: float) -> void:
 	var side := direction.orthogonal()

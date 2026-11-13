@@ -1,5 +1,7 @@
 extends Node
 signal language_changed
+signal camera_changed
+var chase_camera := false
 var difficulty := 1
 var language := "pt_BR"
 const LEVELS := [0.8, 1.0, 1.2]
@@ -19,6 +21,7 @@ func _ready() -> void:
 	var config := ConfigFile.new()
 	config.load("user://game.cfg")
 	difficulty = clampi(int(config.get_value("game", "difficulty", 1)), 0, 2)
+	chase_camera = bool(config.get_value("game", "chase_camera", false))
 	set_language(str(config.get_value("game", "language", "pt_BR")))
 
 func set_language(value: String) -> void:
@@ -31,10 +34,16 @@ func set_difficulty(value: int) -> void:
 	difficulty = clampi(value, 0, 2)
 	_save()
 
+func set_chase_camera(enabled: bool) -> void:
+	chase_camera = enabled
+	_save()
+	camera_changed.emit()
+
 func _save() -> void:
 	var config := ConfigFile.new()
 	config.set_value("game", "language", language)
 	config.set_value("game", "difficulty", difficulty)
+	config.set_value("game", "chase_camera", chase_camera)
 	config.save("user://game.cfg")
 
 func pressure(progress: float) -> float:

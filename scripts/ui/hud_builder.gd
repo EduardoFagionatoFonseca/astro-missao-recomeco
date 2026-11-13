@@ -61,7 +61,7 @@ func _build_ui() -> void:
 	objectives.position = Vector2(917, objectives_top_margin)
 	objectives.add_theme_constant_override("separation", 12)
 	root.add_child(objectives)
-	var names := ["PEDRAS", "ANTENA", "COMBUST."]
+	var names := ["FOTOS", "ANTENA", "COMBUST."]
 	for i in range(3):
 		game.material_icons.append(_make_item_icon(i))
 		var card := PanelContainer.new()
@@ -103,6 +103,7 @@ func _build_ui() -> void:
 	game.audio_settings.visibility_updated.connect(Callable(game, "_update_controls"))
 
 func _make_item_icon(kind: int) -> Texture2D:
+	if kind == 0: return preload("res://assets/ui/mars_archive.svg")
 	var viewport := SubViewport.new()
 	viewport.size = Vector2i(128, 128)
 	viewport.own_world_3d = true
@@ -111,9 +112,7 @@ func _make_item_icon(kind: int) -> Texture2D:
 	add_child(viewport)
 	var stage := Node3D.new()
 	viewport.add_child(stage)
-	if kind == 0:
-		game._asset("rock_largeA", stage, 0.55)
-	elif kind == 1:
+	if kind == 1:
 		game._box(stage, Vector3(0.34, 0.42, 0.28), game.MINT, Vector3(0, 0.23, 0))
 		game._box(stage, Vector3(0.36, 0.1, 0.3), Color("607c77"), Vector3(0, 0.28, 0))
 	else:
