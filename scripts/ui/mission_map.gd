@@ -1,12 +1,10 @@
 extends Control
-## Small top-down mission map showing known outpost, greenhouse, materials and the astronaut.
-
+## The map is centered on the player and uses the local compass, including on the far hemisphere.
 var game: Node3D
 var panel_style: StyleBoxFlat
 var expanded := false
 
 func _ready() -> void:
-	custom_minimum_size = Vector2(226, 226)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	panel_style = preload("res://scripts/ui/ui_theme.gd").box(Color("111820eb"), Color("53616a"), 12)
 	get_viewport().size_changed.connect(_layout)
@@ -14,55 +12,77 @@ func _ready() -> void:
 
 func configure(mission: Node3D) -> void:
 	game = mission
-	queue_redraw()
+	_layout()
 
 func refresh() -> void:
-	if game != null: queue_redraw()
+	queue_redraw()
 
 func _layout() -> void:
 	var view := get_viewport_rect().size
-	var map_size := Vector2(360, 360) if expanded else Vector2(226, 226)
-	custom_minimum_size = map_size
-	size = map_size
-	position = Vector2(view.x - map_size.x - 22, view.y - map_size.y - 22)
+	var side := 360.0 if expanded else 226.0
+	position = Vector2(view.x - side - 22, view.y - side - 22)
 	if game != null and game.controls.mobile:
-		position.y = maxf(0.0, game.controls.jump_rect.position.y - map_size.y - 16.0)
+		var jump: Rect2 = game.controls.jump_rect
+		side = minf(200.0, jump.position.y - 260.0)
+		if side >= 128.0:
+			position = Vector2(view.x - side - 22, jump.position.y - side - 16.0)
+		else:
+			side = 154.0
+			position = Vector2(maxf(22.0, jump.position.x - side - 16.0), maxf(148.0, jump.position.y - 24.0))
+	size = Vector2.ONE * side
+	queue_redraw()
 
 func toggle_expanded() -> void:
 	expanded = not expanded
 	_layout()
-	queue_redraw()
 
 func _draw() -> void:
 	if game == null: return
-	draw_style_box(panel_style, Rect2(Vector2.ZERO, custom_minimum_size))
-	draw_string(ThemeDB.fallback_font, Vector2(16, 23), tr("MAPA DA MISSÃO"), HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color("bad3a7"))
-	var center := Vector2(custom_minimum_size.x * 0.5, custom_minimum_size.y * 0.57)
-	var map_radius := 145.0 if expanded else 83.0
-	draw_circle(center, map_radius, Color("293642"))
-	draw_arc(center, map_radius, 0, TAU, 72, Color("8297a0"), 1.4, true)
-	draw_arc(center, map_radius * 0.55, 0, TAU, 48, Color("53616a"), 1.0, true)
-	draw_line(center + Vector2(-map_radius, 0), center + Vector2(map_radius, 0), Color("53616a"), 1.0)
-	draw_line(center + Vector2(0, -map_radius), center + Vector2(0, map_radius), Color("53616a"), 1.0)
-	_draw_marker(center, game.camp_normal, Color("b7d8bf"), "B")
-	_draw_marker(center, game.garden_normal, Color("87b17b"), tr("E"))
+	draw_style_box(panel_style, Rect2(Vector2.ZERO, size))
+	var font := ThemeDB.fallback_font
+	draw_string(font, Vector2(12, 22), tr("MAPA DA MISSÃO"), HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("bad3a7"))
+	var center := size * Vector2(0.5, 0.55)
+	var radius := size.x * 0.35
+	draw_circle(center, radius, Color("293642"))
+	draw_arc(center, radius, 0, TAU, 64, Color("8297a0"), 1.4, true)
+	draw_arc(center, radius * 0.55, 0, TAU, 40, Color("53616a"), 1.0, true)
+	draw_line(center - Vector2(radius, 0), center + Vector2(radius, 0), Color("53616a"))
+	draw_line(center - Vector2(0, radius), center + Vector2(0, radius), Color("53616a"))
+	_marker(center, radius, game.camp_normal, Color("b7d8bf"), "B")
+	_marker(center, radius, game.garden_normal, Color("87b17b"), tr("E"))
 	for item in game.items:
 		if not item.taken and game._item_available(item):
-			_draw_marker(center, item.normal, Color("f2ba90"), "·")
-	if game.ship != null:
-		_draw_marker(center, game.ship_normal, Color("f0e9d9"), "R")
-	_draw_marker(center, game.normal, Color("ff7468"), "▲", true)
-	var map_hint := tr("B base   E estufa   ▲ você")
-	if not game.controls.mobile:
-		map_hint += tr("   M reduzir") if expanded else tr("   M ampliar")
-	draw_string(ThemeDB.fallback_font, Vector2(17, custom_minimum_size.y - 11), map_hint, HORIZONTAL_ALIGNMENT_LEFT, -1, 12 if expanded else 11, Color("c2cbd0"))
+			_marker(center, radius, item.normal, Color("f2ba90") if item.kind == 0 else Color("d9ceb4"), "")
+	if game.ship != null: _marker(center, radius, game.ship_normal, Color("f0e9d9"), "R")
+	if game.guide.visible and not game.guide.objective_id.is_empty():
+		var offset := _project(game.guide.destination.normalized(), radius)
+		if offset.length() > 4.0:
+			var direction := offset.normalized()
+			var tip := center + direction * clampf(offset.length(), 24.0, radius)
+			var tail := center + direction * 9.0
+			draw_line(tail, tip, Color("131a22"), 7.0, true)
+			draw_line(tail, tip, Color("b7d8bf"), 3.0, true)
+			var wing := direction.orthogonal() * 6.0
+			draw_colored_polygon(PackedVector2Array([tip, tip - direction * 11.0 + wing, tip - direction * 11.0 - wing]), Color("f2ba90"))
+	var facing := _direction(-game.avatar.global_basis.z).normalized()
+	var side := facing.orthogonal()
+	draw_circle(center, 8.0, Color("131a22"))
+	draw_colored_polygon(PackedVector2Array([center + facing * 8, center - facing * 5 + side * 5, center - facing * 2, center - facing * 5 - side * 5]), Color("ff8c7e"))
+	draw_string(font, Vector2(12, size.y - 9), tr("B base   E estufa"), HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("c2cbd0"))
 
-func _draw_marker(center: Vector2, surface_normal: Vector3, color: Color, icon: String, emphasized := false) -> void:
-	var point := center + Vector2(surface_normal.x, surface_normal.z) * (127.0 if expanded else 73.0)
-	var radius := 5.5 if emphasized else 4.0
-	draw_circle(point, radius + 2.0 if emphasized else radius, Color("10151c"))
-	draw_circle(point, radius, color)
-	if icon != "·":
-		draw_string(ThemeDB.fallback_font, point + Vector2(-4, 4), icon, HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color("f0e9d9"))
-	if emphasized:
-		draw_arc(point, radius + 4.0, 0, TAU, 28, color.lightened(0.25), 1.2, true)
+func _direction(world: Vector3) -> Vector2:
+	var north: Vector3 = game.north
+	var right: Vector3 = north.cross(game.normal).normalized()
+	return Vector2(world.dot(right), -world.dot(north))
+
+func _project(surface: Vector3, radius: float) -> Vector2:
+	var direction := _direction(surface)
+	var angle: float = game.normal.angle_to(surface)
+	if direction.is_zero_approx(): return Vector2.UP * radius if angle > 1.0 else Vector2.ZERO
+	return direction.normalized() * minf(angle / (PI * 0.55), 1.0) * radius
+
+func _marker(center: Vector2, radius: float, surface: Vector3, color: Color, icon: String) -> void:
+	var point := center + _project(surface, radius)
+	draw_circle(point, 5.0 if not icon.is_empty() else 3.0, color)
+	if not icon.is_empty():
+		draw_string(ThemeDB.fallback_font, point + Vector2(6, 4), icon, HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color("f0e9d9"))

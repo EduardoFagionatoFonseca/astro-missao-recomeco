@@ -102,8 +102,8 @@ func _render() -> void:
 			icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 			icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 			row.add_child(icon)
-			_text(row, ["5 pedras", "6 peças", "8 combustíveis"][i], 28)
-		_step("DEPOIS, O RESGATE", "O sinal revela pedras e combustível. Reúna tudo para partir.")
+			_text(row, ["8 fotos", "6 peças", "8 combustíveis"][i], 28)
+		_step("DEPOIS, O RESGATE", "O sinal revela fotos e combustível. Reúna tudo para partir.")
 		_text(body, "Um objetivo por vez. O mais urgente vem primeiro.", 24, Color("adb4b8"))
 	else:
 		_step("ENERGIA E RESERVAS", "Energia gera O₂. Estufa repõe comida. Repare aos 30%.")

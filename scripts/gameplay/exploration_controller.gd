@@ -1,6 +1,7 @@
 extends Node
 ## Handles walking, pickups, and the rescue capsule on the planet surface.
 var game: Node3D
+var chase := preload("res://scripts/gameplay/chase_camera.gd").new()
 
 func _ready() -> void:
 	game = get_parent()
@@ -11,6 +12,9 @@ func update_movement(delta: float) -> void:
 	var forward: Vector3 = (-game.camera.global_basis.z).slide(game.normal).normalized()
 	if forward.length() < 0.1: forward = game.north
 	var right: Vector3 = game.camera.global_basis.x.slide(game.normal).normalized()
+	if GameOptions.chase_camera and not game.first_person:
+		forward = chase.steering_forward(game.normal, forward, input.length() > 0.05)
+		right = forward.cross(game.normal).normalized()
 	var direction: Vector3 = right * input.x + forward * input.y
 	if direction.length() > 0.05:
 		var candidate: Vector3 = (game.normal + direction * game.MOVE_SPEED / game.R * delta).normalized()
@@ -20,7 +24,13 @@ func update_movement(delta: float) -> void:
 			game.normal = candidate
 		var transport := Quaternion(old, game.normal)
 		game.north = (transport * game.north).slide(game.normal).normalized()
-		game._align(game.avatar, game.normal, direction)
+		chase.transport(old, game.normal)
+		if GameOptions.chase_camera and not game.first_person:
+			var facing: Vector3 = (transport * -game.avatar.basis.z).slide(game.normal).normalized()
+			var angle := facing.signed_angle_to(direction.slide(game.normal).normalized(), game.normal)
+			game._align(game.avatar, game.normal, facing.rotated(game.normal, clampf(angle, -8.0 * delta, 8.0 * delta)))
+		else:
+			game._align(game.avatar, game.normal, direction)
 		game.walk += delta * 8.0
 	else:
 		game._align(game.avatar, game.normal, -game.avatar.basis.z)
@@ -44,7 +54,10 @@ func update_exterior_camera(smooth: bool, delta: float) -> void:
 	if game.first_person:
 		var desired: Vector3 = game.avatar.global_position + game.normal * 1.48
 		game._update_camera_transform(desired, desired + game.north * 12.0, game.normal, smooth, delta)
+	elif GameOptions.chase_camera and smooth:
+		chase.update(game, delta)
 	else:
+		chase.reset()
 		game._update_third_person_camera(smooth, delta)
 
 func item_available(item: Dictionary) -> bool:
@@ -84,6 +97,7 @@ func collect(index: int) -> void:
 	game.found[item.kind] += 1
 	game.collected += 1
 	game.event_audio.play("collect")
+	if item.kind == 0: game.photo_archive.collect(item.photo)
 	try_rescue()
 
 func try_rescue() -> void:
@@ -119,7 +133,7 @@ func update_ship(delta: float) -> void:
 		game._chime(880)
 
 func interact() -> void:
-	if game.dead or game.won or game.transitioning or game.minigames.visible or game.audio_settings.visible or game.task_question.visible or game.portrait_hint.visible: return
+	if game.dead or game.won or game.transitioning or game.minigames.visible or game.audio_settings.visible or game.task_question.visible or game.photo_archive.is_open() or game.portrait_hint.visible: return
 	if game.inside:
 		var station: String = game.base_room.station_at(game.avatar.position)
 		if station == "exit": game._transition_to(false)

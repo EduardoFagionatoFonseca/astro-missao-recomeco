@@ -3,10 +3,10 @@ extends Node3D
 
 @export_group("Regras e sobrevivência")
 @export_range(1.0, 100.0, 0.5) var R: float = 32.0
-@export var GOALS: Array[int] = [5, 6, 8]
-@export_range(1, 1000, 1) var TOTAL: int = 19
-@export_range(0.0, 20.0, 0.1) var OXYGEN_RATE: float = 1.1
-@export_range(0.0, 20.0, 0.1) var FOOD_RATE: float = 0.72
+@export var GOALS: Array[int] = [8, 6, 8]
+@export_range(1, 1000, 1) var TOTAL: int = 22
+@export_range(0.0, 20.0, 0.1) var OXYGEN_RATE: float = 1.18
+@export_range(0.0, 20.0, 0.1) var FOOD_RATE: float = 0.78
 @export_range(1.0, 150.0, 0.5) var MAX_RESERVE: float = 105.0
 @export_range(0.1, 30.0, 0.1) var EXPOSURE_LIMIT: float = 3.0
 @export_range(0.0, 30.0, 0.1) var VITAL_GRACE: float = 3.0
@@ -144,6 +144,8 @@ var guide: Control
 var task_question: Control
 var oxygen_question_pending := false
 var mission_map: Control
+var photo_archive: Control
+var returning_to_menu := false
 var first_person := false
 
 func _pressure() -> float:
@@ -157,6 +159,7 @@ func _ready() -> void:
 	auto_check = "--smoke-test" in OS.get_cmdline_user_args() and not Engine.has_meta("astro_smoke_completed")
 	if auto_check:
 		GameOptions.difficulty = 1
+		GameOptions.chase_camera = false
 		TranslationServer.set_locale("pt_BR")
 	capture = "--capture" in OS.get_cmdline_user_args() or "--capture-intro" in OS.get_cmdline_user_args() or "--capture-fog" in OS.get_cmdline_user_args() or "--capture-critical" in OS.get_cmdline_user_args() or "--capture-base" in OS.get_cmdline_user_args() or "--capture-power" in OS.get_cmdline_user_args() or "--capture-signal" in OS.get_cmdline_user_args()
 	for arg in OS.get_cmdline_user_args():
@@ -332,7 +335,7 @@ func _process(delta: float) -> void:
 		outro_video._finish()
 		return
 	_update_controls()
-	if portrait_hint.visible or task_question.visible: return
+	if portrait_hint.visible or task_question.visible or photo_archive.is_open() or returning_to_menu: return
 	feedback.tick(delta)
 	if not playing or won or dead: return
 	elapsed += delta
@@ -353,6 +356,7 @@ func _process(delta: float) -> void:
 	_update_hud(delta)
 	_update_prompt()
 	guide.update_guide(self, delta)
+	mission_map.refresh()
 
 func _update_movement(delta: float) -> void:
 	$ExplorationSystem.update_movement(delta)
@@ -383,9 +387,10 @@ func _update_ship(delta: float) -> void:
 
 func _unhandled_key_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.is_pressed() and not event.is_echo():
-		if intro_video.active or outro_video.active or audio_settings.visible or task_question.visible or portrait_hint.visible: return
+		if intro_video.active or outro_video.active or audio_settings.visible or task_question.visible or photo_archive.is_open() or portrait_hint.visible: return
 		if event.physical_keycode == KEY_V and controls.enabled and not inside:
 			first_person = not first_person
+			$ExplorationSystem.chase.reset()
 			_update_camera_mode()
 			feedback.notice_message("camera_mode", "Visão em primeira pessoa (V)" if first_person else "Visão de exploração (V)", false)
 			get_viewport().set_input_as_handled()
@@ -396,6 +401,7 @@ func _unhandled_key_input(event: InputEvent) -> void:
 			return
 		if event.physical_keycode == KEY_ESCAPE and playing and not won and not dead:
 			if minigames.visible: minigames.close()
+			else: audio_settings.open()
 			get_viewport().set_input_as_handled()
 
 func _interact() -> void:
@@ -560,7 +566,6 @@ func _update_hud(_delta: float) -> void:
 	vignette_material.set_shader_parameter("intensity", intensity)
 	vignette_material.set_shader_parameter("radiation", clampf(exposure / EXPOSURE_LIMIT, 0, 1) if not inside and not dead and solar_phase == "active" else 0.0)
 	_update_survival_timer()
-	if mission_map != null: mission_map.refresh()
 
 func _update_camera_mode() -> void:
 	var outside_first_person := first_person and not inside
@@ -624,7 +629,11 @@ func _finish() -> void:
 	outro_video.begin(muted, true)
 
 func _return_to_menu() -> void:
-	if won: get_tree().call_deferred("reload_current_scene")
+	if returning_to_menu: return
+	returning_to_menu = true
+	playing = false
+	_update_controls()
+	get_tree().call_deferred("reload_current_scene")
 
 func _build_audio() -> void:
 	$AudioManager.build()
@@ -662,6 +671,13 @@ func _build_expansion() -> void:
 	task_question.closed.connect(_update_controls)
 	mission_map = hud.get_node("MissionMap")
 	mission_map.configure(self)
+	photo_archive = preload("res://scripts/ui/mars_archive.gd").new()
+	photo_archive.name = "MarsArchive"
+	hud.add_child(photo_archive)
+	photo_archive.visibility_updated.connect(_update_controls)
+	audio_settings.menu_requested.connect(_return_to_menu)
+	GameOptions.camera_changed.connect($ExplorationSystem.chase.reset)
+	hud.move_child(audio_settings, -1)
 	minigames = hud.get_node("BaseMinigames")
 	minigames.power_repaired.connect(_on_power_repaired)
 	minigames.signal_sent.connect(_on_signal_sent)
@@ -728,8 +744,11 @@ func _center_modal(modal: Control) -> void:
 func _update_controls() -> void:
 	if controls == null: return
 	minigames.frozen = portrait_hint.visible or audio_settings.visible
-	var active := playing and not dead and not won and not transitioning and not minigames.visible and not portrait_hint.visible and not audio_settings.visible and not task_question.visible
+	var archive_open: bool = photo_archive.is_open()
+	var active := playing and not returning_to_menu and not archive_open and not dead and not won and not transitioning and not minigames.visible and not portrait_hint.visible and not audio_settings.visible and not task_question.visible
+	if controls.enabled and not active: $ExplorationSystem.chase.steering = Vector3.ZERO
 	controls.set_enabled(active)
+	photo_archive.visible = archive_open or active
 	controls.jump_available = not inside
 	_sync_resource_visibility()
 	if feedback.link_online != communications_online: feedback.set_link(communications_online)
@@ -742,7 +761,7 @@ func _update_controls() -> void:
 	power_label.text = tr("ENERGIA %d%%") % energy_charge if energy_ready else tr("ENERGIA OFF / O₂ OFF")
 	base_status.text = tr("RÁDIO ONLINE") if communications_online else tr("RÁDIO OFFLINE")
 	if mission_map != null:
-		mission_map.visible = playing and not dead and not won and not inside and not intro_video.active and not minigames.visible and not audio_settings.visible and not task_question.visible and not portrait_hint.visible
+		mission_map.visible = not archive_open and playing and not dead and not won and not inside and not intro_video.active and not minigames.visible and not audio_settings.visible and not task_question.visible and not portrait_hint.visible
 
 func _publish_web_test_state() -> void:
 	var forward := (-camera.global_basis.z).slide(normal).normalized()
@@ -786,8 +805,8 @@ func _update_prompt() -> void:
 	else:
 		var near := _nearest()
 		if near >= 0 and _can_reach(items[near]):
-			target = "collect"
-			text = "Coletar material"
+			target = "photo" if items[near].kind == 0 else "collect"
+			text = "Coletar foto" if target == "photo" else "Coletar material"
 	controls.action_text = text if not text.is_empty() else "Interagir"
 	controls.action_available = not target.is_empty()
 	controls.queue_redraw()
