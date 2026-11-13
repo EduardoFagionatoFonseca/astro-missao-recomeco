@@ -14,13 +14,13 @@ extends Node3D
 
 @export_group("Ciclos de eventos")
 @export_range(1.0, 600.0, 0.5) var SOLAR_INTERVAL: float = 100.0
-@export_range(1.0, 60.0, 0.5) var SOLAR_WARNING: float = 10.0
+@export_range(1.0, 60.0, 0.5) var SOLAR_WARNING: float = 5.0
 @export_range(1.0, 60.0, 0.5) var SOLAR_DURATION: float = 12.0
 @export_range(1.0, 600.0, 0.5) var ENERGY_INTERVAL: float = 63.75
 @export_range(1.0, 600.0, 0.5) var SIGNAL_INTERVAL: float = 85.0
 
 @export_group("Movimentação")
-@export_range(0.1, 20.0, 0.01) var MOVE_SPEED: float = 3.8934
+@export_range(0.1, 20.0, 0.01) var MOVE_SPEED: float = 5.8401
 @export_range(2.0, 12.0, 0.1) var THIRD_PERSON_DISTANCE := 8.0
 @export_range(1.0, 10.0, 0.1) var THIRD_PERSON_HEIGHT := 6.6
 @export_range(35.0, 75.0, 1.0) var THIRD_PERSON_FOV := 44.0
@@ -199,7 +199,8 @@ func _ready() -> void:
 		_update_third_person_camera(false)
 	if "--capture-warning" in OS.get_cmdline_user_args():
 		solar_phase = "warning"
-		solar_clock = 7
+		solar_clock = 2
+		solar_remaining = SOLAR_WARNING - solar_clock
 		feedback.shelter_tutorial()
 	if "--capture-settings" in OS.get_cmdline_user_args(): audio_settings.open()
 	if "--capture-briefing" in OS.get_cmdline_user_args(): _show_briefing()
@@ -604,6 +605,8 @@ func _update_camera_transform(desired: Vector3, target: Vector3, up: Vector3, sm
 func _update_survival_timer() -> void:
 	var lines: Array[String] = []
 	if playing and not dead and not won:
+		if solar_phase == "warning" and not inside:
+			lines.append(tr("NÉVOA SOLAR EM") + "   %.1f s" % maxf(0.0, solar_remaining))
 		if solar_phase == "active" and not inside:
 			lines.append(tr("RADIAÇÃO") + "   %.1f s" % maxf(0, EXPOSURE_LIMIT - exposure))
 		if oxygen <= 0.0 and not (_at_camp() and energy_ready):
@@ -746,7 +749,6 @@ func _update_controls() -> void:
 	minigames.frozen = portrait_hint.visible or audio_settings.visible
 	var archive_open: bool = photo_archive.is_open()
 	var active := playing and not returning_to_menu and not archive_open and not dead and not won and not transitioning and not minigames.visible and not portrait_hint.visible and not audio_settings.visible and not task_question.visible
-	if controls.enabled and not active: $ExplorationSystem.chase.steering = Vector3.ZERO
 	controls.set_enabled(active)
 	photo_archive.visible = archive_open or active
 	controls.jump_available = not inside
