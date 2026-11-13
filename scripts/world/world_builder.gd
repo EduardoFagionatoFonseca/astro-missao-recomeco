@@ -25,7 +25,6 @@ func build(mission: Node3D) -> void:
 	_build_planet()
 	_build_camp()
 	_build_items()
-	_build_supply_caches()
 
 func _material(color: Color, glow: float = 0.0) -> StandardMaterial3D:
 	var mat := StandardMaterial3D.new()
@@ -267,35 +266,3 @@ func _build_items() -> void:
 		marker.material_override = _material([game.PEACH, game.MINT, Color("dfcc97")][kind], 0.5)
 		game.items.append({"node": root, "normal": n, "visual": visual, "marker": marker, "ring": ring, "kind": kind, "taken": false})
 	game._sync_resource_visibility()
-
-func _build_supply_caches() -> void:
-	var created := 0
-	var candidate := 19
-	while created < 12:
-		var surface_normal := _fibonacci(candidate, 48)
-		candidate += 1
-		if surface_normal.dot(game.camp_normal) > 0.86 or surface_normal.dot(game.garden_normal) > 0.86:
-			continue
-		var overlaps_objective := false
-		for item in game.items:
-			if surface_normal.dot(item.normal) > 0.96:
-				overlaps_objective = true
-				break
-		if overlaps_objective:
-			continue
-		var kind := "oxygen_tube" if created % 2 == 0 else "meal_pack"
-		var root := _surface(surface_normal)
-		var visual := Node3D.new()
-		root.add_child(visual)
-		if kind == "oxygen_tube":
-			_cylinder(visual, 0.18, 0.72, Color("bad6d5"), Vector3(0, 0.4, 0))
-			_cylinder(visual, 0.2, 0.12, Color("638ba1"), Vector3(0, 0.82, 0))
-			_box(visual, Vector3(0.26, 0.08, 0.15), Color("e8d8b5"), Vector3(0, 0.48, -0.17))
-		else:
-			_box(visual, Vector3(0.48, 0.58, 0.32), Color("d8aa6a"), Vector3(0, 0.34, 0))
-			_box(visual, Vector3(0.4, 0.1, 0.34), Color("7c9b7c"), Vector3(0, 0.59, 0))
-		var marker_color := Color("91c9d2") if kind == "oxygen_tube" else Color("f2ba90")
-		var marker := _ball(root, 0.075, marker_color, Vector3(0, 1.5, 0))
-		marker.material_override = _material(marker_color, 0.75)
-		game.supplies.append({"node": root, "normal": surface_normal, "visual": visual, "marker": marker, "kind": kind, "taken": false})
-		created += 1

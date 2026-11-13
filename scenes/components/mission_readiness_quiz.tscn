@@ -1,6 +1,0 @@
-[gd_scene format=3]
-
-[ext_resource type="Script" path="res://scripts/ui/mission_readiness_quiz.gd" id="1"]
-
-[node name="MissionReadinessQuiz" type="Control"]
-script = ExtResource("1")

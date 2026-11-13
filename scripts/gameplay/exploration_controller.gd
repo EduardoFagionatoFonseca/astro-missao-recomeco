@@ -38,12 +38,14 @@ func update_movement(delta: float) -> void:
 	game.avatar.position = game.normal * (game.R + game.altitude)
 	game.astronaut.position.y = absf(sin(game.walk)) * input.length() * 0.055
 	game.astronaut.rotation.z = sin(game.walk) * input.length() * 0.045
+	update_exterior_camera(true, delta)
+
+func update_exterior_camera(smooth: bool, delta: float) -> void:
 	if game.first_person:
-		var desired: Vector3 = game.avatar.position + game.normal * 1.48
-		game.camera.position = game.camera.position.lerp(desired, 1.0 - exp(-8.0 * delta))
-		game.camera.look_at(game.camera.position + (-game.avatar.global_basis.z) * 12.0, game.normal)
+		var desired: Vector3 = game.avatar.global_position + game.normal * 1.48
+		game._update_camera_transform(desired, desired + game.north * 12.0, game.normal, smooth, delta)
 	else:
-		game._update_third_person_camera(true, delta)
+		game._update_third_person_camera(smooth, delta)
 
 func item_available(item: Dictionary) -> bool:
 	return item.kind == 1 or (game.signal_transmitted and game.communications_online)
@@ -51,8 +53,6 @@ func item_available(item: Dictionary) -> bool:
 func sync_resource_visibility() -> void:
 	for item in game.items:
 		item.node.visible = not game.inside and not item.taken and item_available(item)
-	for cache in game.supplies:
-		cache.node.visible = not game.inside and not cache.taken
 
 func can_reach(item: Dictionary) -> bool:
 	return game.normal.dot(item.normal) > cos(1.25 / game.R) and absf(game.altitude - game.terrain.height_at(item.normal)) < 0.24
@@ -75,51 +75,19 @@ func update_items(delta: float) -> void:
 		item.visual.position.y = 0.08 + sin(game.elapsed * 2.0 + i) * 0.055
 		item.marker.position.y = 1.0 + sin(game.elapsed * 2 + i) * 0.1
 		item.visual.rotation.y += delta * 0.25
-	for i in range(game.supplies.size()):
-		var cache: Dictionary = game.supplies[i]
-		if cache.taken: continue
-		cache.visual.position.y = 0.08 + sin(game.elapsed * 1.7 + i) * 0.05
-		cache.marker.position.y = 1.4 + sin(game.elapsed * 2.0 + i) * 0.08
-		cache.visual.rotation.y += delta * 0.18
 
 func collect(index: int) -> void:
 	if index < 0 or index >= game.items.size() or game.items[index].taken or not item_available(game.items[index]): return
 	var item: Dictionary = game.items[index]
-	var inventory_item_id: String = ["stone", "antenna_part", "fuel_cell"][int(item.kind)]
-	if not game.inventory_ui.can_add(inventory_item_id): return
 	item.taken = true
 	item.node.visible = false
 	game.found[item.kind] += 1
 	game.collected += 1
-	game.inventory_ui.add_item(inventory_item_id)
 	game.event_audio.play("collect")
 	try_rescue()
 
-func nearest_supply() -> int:
-	var index := -1
-	var best := -2.0
-	for i in range(game.supplies.size()):
-		var cache: Dictionary = game.supplies[i]
-		if cache.taken: continue
-		var dot: float = game.normal.dot(cache.normal)
-		if dot > best:
-			best = dot
-			index = i
-	return index
-
-func collect_supply(index: int) -> void:
-	if index < 0 or index >= game.supplies.size(): return
-	var cache: Dictionary = game.supplies[index]
-	if cache.taken: return
-	var kind: String = cache.kind
-	if not game.inventory_ui.can_add(kind): return
-	cache.taken = true
-	cache.node.visible = false
-	game.inventory_ui.add_item(kind)
-	game.event_audio.play("collect")
-
 func try_rescue() -> void:
-	if (game.days_until_rescue <= 0 or game.auto_check) and game.collected == game.TOTAL and game.signal_transmitted and game.communications_online and game.ship == null:
+	if game.collected == game.TOTAL and game.signal_transmitted and game.communications_online and game.ship == null:
 		_begin_rescue()
 
 func _begin_rescue() -> void:
@@ -151,7 +119,7 @@ func update_ship(delta: float) -> void:
 		game._chime(880)
 
 func interact() -> void:
-	if game.dead or game.won or game.transitioning or game.minigames.visible or game.audio_settings.visible: return
+	if game.dead or game.won or game.transitioning or game.minigames.visible or game.audio_settings.visible or game.task_question.visible or game.portrait_hint.visible: return
 	if game.inside:
 		var station: String = game.base_room.station_at(game.avatar.position)
 		if station == "exit": game._transition_to(false)
@@ -170,10 +138,7 @@ func interact() -> void:
 		game.food = game.MAX_RESERVE
 		game.food_empty_time = 0.0
 		game._chime(550)
-		return
-	var supply_index := nearest_supply()
-	if supply_index >= 0 and can_reach(game.supplies[supply_index]):
-		collect_supply(supply_index)
+		game._ask_task("food")
 		return
 	var near := nearest()
 	if near >= 0 and can_reach(game.items[near]):

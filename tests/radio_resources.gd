@@ -63,4 +63,4 @@ func run(game: Node3D) -> void:
 	game.normal = game.camp_normal
 	game.oxygen = game.MAX_RESERVE
 	game.food = game.MAX_RESERVE
-	print("PASS: antenna discovery, offline collection blocked, inventory retained, independent audio gains, settings keep survival running and location music")
+	print("PASS: antenna discovery, offline collection blocked, collected materials retained, independent audio gains, settings keep survival running and location music")

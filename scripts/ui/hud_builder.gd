@@ -56,24 +56,6 @@ func _build_ui() -> void:
 	vitals.add_child(game.food_label)
 	game.food_bar = _vital_bar(game.PEACH)
 	vitals.add_child(game.food_bar)
-	var rescue_panel := PanelContainer.new()
-	rescue_panel.position = Vector2(vitals_panel_position.x, vitals_panel_position.y + vitals_panel_size.y + 12)
-	rescue_panel.custom_minimum_size = Vector2(vitals_panel_size.x, 78)
-	rescue_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	rescue_panel.add_theme_stylebox_override("panel", preload("res://scripts/ui/ui_theme.gd").box(Color("191c21f5"), Color("b78e65"), 14))
-	root.add_child(rescue_panel)
-	var rescue_row := HBoxContainer.new()
-	rescue_row.add_theme_constant_override("separation", 12)
-	rescue_panel.add_child(rescue_row)
-	var rescue_copy := VBoxContainer.new()
-	rescue_copy.add_theme_constant_override("separation", 2)
-	rescue_row.add_child(rescue_copy)
-	game.rescue_status_label = game._label("RETORNO DA NAVE", 14, game.MUTED)
-	game.rescue_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	game.rescue_status_label.custom_minimum_size.x = 210
-	rescue_copy.add_child(game.rescue_status_label)
-	game.rescue_countdown_label = game._label("05 DIAS", 24, game.CREAM)
-	rescue_row.add_child(game.rescue_countdown_label)
 	var objectives := HBoxContainer.new()
 	game.objectives_ui = objectives
 	objectives.position = Vector2(917, objectives_top_margin)

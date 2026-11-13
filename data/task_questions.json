@@ -1,0 +1,127 @@
+{
+  "power": {
+    "pt_BR": {
+      "topic": "Energia",
+      "question": "O que reduziu a energia dos painéis solares da sonda InSight em Marte?",
+      "answers": [
+        "Gelo nos cabos",
+        "Poeira nos painéis",
+        "Sombras dos astronautas"
+      ],
+      "explanation": "A poeira acumulada deixou menos luz chegar aos painéis da InSight."
+    },
+    "en": {
+      "topic": "Energy",
+      "question": "What reduced the energy from the InSight lander's solar panels on Mars?",
+      "answers": [
+        "Ice on the wires",
+        "Dust on the panels",
+        "Astronaut shadows"
+      ],
+      "explanation": "Dust buildup kept some sunlight from reaching InSight's panels."
+    },
+    "correct": 1,
+    "source": "NASA · InSight",
+    "url": "https://www.jpl.nasa.gov/news/press_kits/insight/landing/facts/"
+  },
+  "signal": {
+    "pt_BR": {
+      "topic": "Comunicação",
+      "question": "O que ajuda os rovers a enviar dados de Marte para a Terra?",
+      "answers": [
+        "Satélites em órbita de Marte",
+        "Câmeras nas rodas",
+        "Painéis solares na Terra"
+      ],
+      "explanation": "Os orbitadores recebem dados na passagem sobre o rover e retransmitem para a Terra."
+    },
+    "en": {
+      "topic": "Communications",
+      "question": "What helps rovers send data from Mars to Earth?",
+      "answers": [
+        "Satellites orbiting Mars",
+        "Cameras on the wheels",
+        "Solar panels on Earth"
+      ],
+      "explanation": "Orbiters receive data as they pass over the rover and relay it to Earth."
+    },
+    "correct": 0,
+    "source": "NASA · Mars Relay Network",
+    "url": "https://science.nasa.gov/mars/mars-relay-network/"
+  },
+  "oxygen": {
+    "pt_BR": {
+      "topic": "Oxigênio",
+      "question": "De que gás do ar de Marte o MOXIE extraiu oxigênio?",
+      "answers": [
+        "Hélio",
+        "Nitrogênio",
+        "Dióxido de carbono"
+      ],
+      "explanation": "O MOXIE, a bordo do Perseverance, produziu oxigênio a partir do dióxido de carbono de Marte."
+    },
+    "en": {
+      "topic": "Oxygen",
+      "question": "Which gas in Martian air did MOXIE use to make oxygen?",
+      "answers": [
+        "Helium",
+        "Nitrogen",
+        "Carbon dioxide"
+      ],
+      "explanation": "MOXIE, aboard Perseverance, made oxygen from Martian carbon dioxide."
+    },
+    "correct": 2,
+    "source": "NASA · MOXIE",
+    "url": "https://www.nasa.gov/missions/mars-2020-perseverance/perseverance-rover/nasas-oxygen-generating-experiment-moxie-completes-mars-mission/"
+  },
+  "food": {
+    "pt_BR": {
+      "topic": "Estufa",
+      "question": "No experimento Veggie da NASA, o que ilumina as plantas na estação espacial?",
+      "answers": [
+        "Luzes LED",
+        "Lanternas manuais",
+        "Calor dos computadores"
+      ],
+      "explanation": "O Veggie usa luzes LED para cultivar plantas a bordo da estação espacial."
+    },
+    "en": {
+      "topic": "Greenhouse",
+      "question": "In NASA's Veggie experiment, what lights the plants on the space station?",
+      "answers": [
+        "LED lights",
+        "Handheld flashlights",
+        "Heat from computers"
+      ],
+      "explanation": "Veggie uses LED lights to grow plants aboard the space station."
+    },
+    "correct": 0,
+    "source": "NASA · Veggie",
+    "url": "https://www.nasa.gov/exploration-research-and-technology/growing-plants-in-space/"
+  },
+  "radiation": {
+    "pt_BR": {
+      "topic": "Abrigo solar",
+      "question": "O que o instrumento RAD do Curiosity mediu durante uma tempestade solar em Marte?",
+      "answers": [
+        "Queda da temperatura",
+        "Aumento da radiação",
+        "Aumento do oxigênio"
+      ],
+      "explanation": "O RAD mediu um pico de radiação em maio de 2024, quando partículas da tempestade atingiram Marte."
+    },
+    "en": {
+      "topic": "Solar shelter",
+      "question": "What did Curiosity's RAD instrument measure during a solar storm on Mars?",
+      "answers": [
+        "A drop in temperature",
+        "A rise in radiation",
+        "A rise in oxygen"
+      ],
+      "explanation": "RAD measured a spike in radiation in May 2024 when particles from the storm reached Mars."
+    },
+    "correct": 1,
+    "source": "NASA · RAD / Curiosity",
+    "url": "https://science.nasa.gov/resource/curiosity-sees-streaks-and-specks-during-2024-solar-storm/"
+  }
+}

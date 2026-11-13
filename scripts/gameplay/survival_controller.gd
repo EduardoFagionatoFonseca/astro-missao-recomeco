@@ -7,7 +7,10 @@ func _ready() -> void:
 
 func update_survival(delta: float) -> void:
 	if game._at_camp() and game.energy_ready:
+		var before: float = game.oxygen
 		game.oxygen = minf(game.MAX_RESERVE, game.oxygen + delta * 25.0)
+		if game.oxygen == game.MAX_RESERVE and before < game.MAX_RESERVE:
+			game.oxygen_question_pending = true
 	else:
 		game.oxygen = maxf(0.0, game.oxygen - delta * game.OXYGEN_RATE * game._pressure())
 	game.food = maxf(0.0, game.food - delta * game.FOOD_RATE * game._pressure())

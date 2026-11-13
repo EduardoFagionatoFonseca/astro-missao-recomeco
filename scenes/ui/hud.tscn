@@ -10,8 +10,7 @@
 [ext_resource type="PackedScene" path="res://scenes/components/base_minigames.tscn" id="8"]
 [ext_resource type="PackedScene" path="res://scenes/components/intro_video.tscn" id="9"]
 [ext_resource type="PackedScene" path="res://scenes/components/intro_video.tscn" id="10"]
-[ext_resource type="PackedScene" path="res://scenes/components/mission_readiness_quiz.tscn" id="11"]
-[ext_resource type="PackedScene" path="res://scenes/components/inventory_panel.tscn" id="12"]
+[ext_resource type="PackedScene" path="res://scenes/components/task_question.tscn" id="11"]
 [ext_resource type="PackedScene" path="res://scenes/components/mission_map.tscn" id="13"]
 
 [node name="HUD" type="CanvasLayer"]
@@ -37,8 +36,6 @@ script = ExtResource("1")
 
 [node name="OutroVideo" parent="." instance=ExtResource("10")]
 
-[node name="MissionReadinessQuiz" parent="." instance=ExtResource("11")]
-
-[node name="InventoryPanel" parent="." instance=ExtResource("12")]
+[node name="TaskQuestion" parent="." instance=ExtResource("11")]
 
 [node name="MissionMap" parent="." instance=ExtResource("13")]

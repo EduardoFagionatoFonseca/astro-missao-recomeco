@@ -47,7 +47,13 @@ func _layout() -> void:
 	var button_gap := 12.0 * control_scale
 	stick_radius = clampf(minf(view.x, view.y) * 0.16, 62.0, 96.0)
 	stick_center = Vector2(maxf(stick_radius + margin, view.x * 0.19), view.y - stick_radius - margin)
-	action_rect = Rect2(view.x - button_width - margin, view.y - button_height - margin, button_width, button_height)
+	var bottom_gap := margin
+	if mobile:
+		var screen_height := float(DisplayServer.window_get_size().y)
+		if OS.has_feature("web"):
+			screen_height = float(JavaScriptBridge.eval("window.visualViewport ? window.visualViewport.height : window.innerHeight"))
+		bottom_gap = clampf(86.0 * view.y / maxf(screen_height, 1.0), margin, view.y * 0.4)
+	action_rect = Rect2(view.x - button_width - margin, view.y - button_height - bottom_gap, button_width, button_height)
 	jump_rect = Rect2(view.x - button_width - margin, action_rect.position.y - button_height - button_gap, button_width, button_height)
 	reset()
 

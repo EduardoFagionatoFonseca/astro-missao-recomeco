@@ -9,7 +9,7 @@ Abra `project.godot` no Godot 4.7. A cena inicial é `scenes/main.tscn`. A estru
 - `scenes/components/base_interior.tscn`: interior da base.
 - `scenes/components/event_audio.tscn` e `scenes/components/audio_manager.tscn`: efeitos e músicas.
 - `scenes/components/survival_system.tscn`, `scenes/components/mission_progression.tscn` e `scenes/components/exploration_system.tscn`: sobrevivência, energia, comunicações, movimento e coleta.
-- `scenes/components/mission_readiness_quiz.tscn`, `inventory_panel.tscn` e `mission_map.tscn`: avaliação antes da missão, inventário consumível e minimapa.
+- scenes/components/task_question.tscn e mission_map.tscn: perguntas de tarefa e minimapa.
 
 Abra uma subcena pelo painel **Sistema de arquivos** para trabalhar nela isoladamente. Na cena principal, use a árvore para selecionar `World`, `Actors`, `BaseInterior` ou `HUD`.
 
@@ -19,7 +19,7 @@ Abra uma subcena pelo painel **Sistema de arquivos** para trabalhar nela isolada
 - `scripts/world/`: terreno, base e montagem do mundo.
 - `scripts/gameplay/`: sobrevivência, progressão, controles e minigames.
 - `scripts/ui/`: menu, briefing, HUD, guia, mensagens, tema e configurações.
-- `data/mission_readiness.json`: perguntas, respostas, devolutivas e nota mínima de prontidão.
+- data/task_questions.json: perguntas, respostas e fontes da NASA em português e inglês.
 - `scripts/audio/`: música, efeitos e sons da missão.
 - `shaders/`: efeitos visuais de radiação e exposição.
 - `assets/`: modelos, imagens, áudio e vídeos.
@@ -33,7 +33,7 @@ Selecione `Astro` em `scenes/main.tscn` para ajustar no Inspetor raio do planeta
 
 ## Interface e arte
 
-Os componentes de interface têm cenas próprias em `scenes/components/` e estão reunidos em `scenes/ui/hud.tscn`. O botão **Treinar Tripulação** abre cinco cutscenes ilustradas, uma antes de cada pergunta. Edite tema, cenas e legendas em `data/mission_readiness.json`; a arte animada é desenhada em `scripts/ui/mission_quiz_cutscene.gd`. Somente a pontuação mínima libera o vídeo de abertura e o início da missão. O inventário abre com `I`, tem 36 espaços, pilhas de até 64 itens e uma barra rápida de nove posições; arraste itens para reorganizar, selecione com `1`–`9` e use o espaço ativo com `F` ou clique direito. A tecla `V` alterna entre visão de exploração e primeira pessoa; `M` amplia/reduz o minimapa. Selecione `HUDBuilder` dentro de `scenes/ui/hud.tscn` para ajustar margens e posições no Inspetor.
+Os componentes de interface têm cenas próprias em `scenes/components/` e estão reunidos em `scenes/ui/hud.tscn`. Edite as perguntas e fontes em data/task_questions.json. A tecla `V` alterna entre visão de exploração e primeira pessoa; `M` amplia/reduz o minimapa. Selecione `HUDBuilder` dentro de `scenes/ui/hud.tscn` para ajustar margens e posições no Inspetor.
 
 O mundo 3D é gerado na inicialização para distribuir os objetos pela superfície esférica. A montagem está em `scripts/world/world_builder.gd`; a forma do terreno está em `scripts/world/planet_terrain.gd`. As quantidades, a semente, o acampamento, a estufa e a direção do sol são propriedades do nó `World` no Inspetor.
 
@@ -47,5 +47,3 @@ Modelos e imagens ficam em `assets/space/` e `assets/ui/`. As trilhas e vídeos 
 4. Salve a cena ou o script; o Godot atualiza as referências de recursos automaticamente.
 
 A cena organiza os sistemas e os torna localizáveis. Alguns detalhes visuais, especialmente o planeta e os controles do HUD, são gerados por código; seus pontos de edição estão indicados acima.
-
-

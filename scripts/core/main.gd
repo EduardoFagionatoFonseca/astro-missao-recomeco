@@ -5,8 +5,8 @@ extends Node3D
 @export_range(1.0, 100.0, 0.5) var R: float = 32.0
 @export var GOALS: Array[int] = [5, 6, 8]
 @export_range(1, 1000, 1) var TOTAL: int = 19
-@export_range(0.0, 20.0, 0.1) var OXYGEN_RATE: float = 0.45
-@export_range(0.0, 20.0, 0.1) var FOOD_RATE: float = 0.22
+@export_range(0.0, 20.0, 0.1) var OXYGEN_RATE: float = 1.1
+@export_range(0.0, 20.0, 0.1) var FOOD_RATE: float = 0.72
 @export_range(1.0, 150.0, 0.5) var MAX_RESERVE: float = 105.0
 @export_range(0.1, 30.0, 0.1) var EXPOSURE_LIMIT: float = 3.0
 @export_range(0.0, 30.0, 0.1) var VITAL_GRACE: float = 3.0
@@ -23,13 +23,9 @@ extends Node3D
 @export_range(0.1, 20.0, 0.01) var MOVE_SPEED: float = 3.8934
 @export_range(2.0, 12.0, 0.1) var THIRD_PERSON_DISTANCE := 8.0
 @export_range(1.0, 10.0, 0.1) var THIRD_PERSON_HEIGHT := 6.6
-@export_range(35.0, 75.0, 1.0) var THIRD_PERSON_FOV := 58.0
+@export_range(35.0, 75.0, 1.0) var THIRD_PERSON_FOV := 44.0
 @export_range(1.0, 12.0, 0.1) var CAMERA_POSITION_SMOOTHING := 3.8
 @export_range(1.0, 12.0, 0.1) var CAMERA_ROTATION_SMOOTHING := 4.6
-
-@export_group("Retorno da nave")
-@export_range(1, 30, 1) var RESCUE_WAIT_DAYS := 5
-@export_range(30.0, 600.0, 5.0) var MISSION_DAY_SECONDS := 120.0
 
 @export_group("Música")
 @export_range(0.0, 1.0, 0.01) var PLANET_MUSIC_GAIN: float = 0.16
@@ -47,8 +43,6 @@ var avatar: Node3D
 var astronaut: Node3D
 var camera: Camera3D
 var items: Array[Dictionary] = []
-var supplies: Array[Dictionary] = []
-var inventory: Dictionary = {"oxygen_tube": 1, "meal_pack": 1}
 var found := [0, 0, 0]
 var collected := 0
 var playing := false
@@ -147,14 +141,10 @@ var survival_timer: PanelContainer
 var survival_timer_label: Label
 var qa_clock := 0.0
 var guide: Control
-var readiness_quiz: Control
-var inventory_ui: Control
+var task_question: Control
+var oxygen_question_pending := false
 var mission_map: Control
 var first_person := false
-var days_until_rescue := 5
-var rescue_day_clock := 0.0
-var rescue_countdown_label: Label
-var rescue_status_label: Label
 
 func _pressure() -> float:
 	return GameOptions.pressure(float(collected) / TOTAL)
@@ -342,10 +332,10 @@ func _process(delta: float) -> void:
 		outro_video._finish()
 		return
 	_update_controls()
+	if portrait_hint.visible or task_question.visible: return
 	feedback.tick(delta)
 	if not playing or won or dead: return
 	elapsed += delta
-	_advance_rescue_countdown(delta)
 	_update_energy(delta)
 	if controls.enabled:
 		if inside:
@@ -355,6 +345,9 @@ func _process(delta: float) -> void:
 	if inside: base_room.set_power(energy_ready, energy_charge)
 	_update_survival(delta)
 	if dead: return
+	if oxygen_question_pending and controls.enabled:
+		oxygen_question_pending = false
+		_ask_task("oxygen")
 	_update_items(delta)
 	_update_ship(delta)
 	_update_hud(delta)
@@ -390,53 +383,20 @@ func _update_ship(delta: float) -> void:
 
 func _unhandled_key_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.is_pressed() and not event.is_echo():
-		if intro_video.active or outro_video.active or audio_settings.visible: return
-		if event.physical_keycode == KEY_V and playing and not dead and not won and not inside:
+		if intro_video.active or outro_video.active or audio_settings.visible or task_question.visible or portrait_hint.visible: return
+		if event.physical_keycode == KEY_V and controls.enabled and not inside:
 			first_person = not first_person
-			astronaut.visible = not first_person
-			camera.fov = 72.0 if first_person else THIRD_PERSON_FOV
+			_update_camera_mode()
 			feedback.notice_message("camera_mode", "Visão em primeira pessoa (V)" if first_person else "Visão de exploração (V)", false)
 			get_viewport().set_input_as_handled()
 			return
-		if event.physical_keycode == KEY_I and playing and not dead and not won:
-			inventory_ui.toggle_inventory()
-			get_viewport().set_input_as_handled()
-			return
-		var hotbar_keys := [KEY_1, KEY_2, KEY_3, KEY_4, KEY_5, KEY_6, KEY_7, KEY_8, KEY_9]
-		var hotbar_index: int = hotbar_keys.find(event.physical_keycode)
-		if hotbar_index >= 0 and playing:
-			inventory_ui.select_hotbar(hotbar_index)
-			get_viewport().set_input_as_handled()
-			return
-		if event.physical_keycode == KEY_F and playing and not dead and not won:
-			inventory_ui.use_selected_item()
-			get_viewport().set_input_as_handled()
-			return
-		if event.physical_keycode == KEY_M and playing and not inside:
+		if event.physical_keycode == KEY_M and controls.enabled and not inside:
 			mission_map.toggle_expanded()
 			get_viewport().set_input_as_handled()
 			return
 		if event.physical_keycode == KEY_ESCAPE and playing and not won and not dead:
-			if inventory_ui.opened: inventory_ui.close_inventory()
-			elif minigames.visible: minigames.close()
+			if minigames.visible: minigames.close()
 			get_viewport().set_input_as_handled()
-
-func _use_inventory_item(item_id: String, slot_index: int) -> void:
-	if inventory_ui == null: return
-	if item_id == "oxygen_tube":
-		if oxygen >= MAX_RESERVE - 1.0 or not inventory_ui.remove_item_from_slot(slot_index): return
-		oxygen = minf(MAX_RESERVE, oxygen + 40.0)
-		oxygen_empty_time = 0.0
-		_chime(660)
-	elif item_id == "meal_pack":
-		if food >= MAX_RESERVE - 1.0 or not inventory_ui.remove_item_from_slot(slot_index): return
-		food = minf(MAX_RESERVE, food + 40.0)
-		food_empty_time = 0.0
-		_chime(550)
-
-func _on_inventory_changed(counts: Dictionary) -> void:
-	inventory = counts.duplicate()
-	if inventory_ui != null: inventory_ui.refresh()
 
 func _interact() -> void:
 	$ExplorationSystem.interact()
@@ -546,19 +506,6 @@ func _build_ui() -> void:
 func _start() -> void:
 	start_menu.hide()
 	if auto_check or capture:
-		_begin_launch()
-		return
-	playing = false
-	hud_root.hide()
-	readiness_quiz.open()
-	_update_controls()
-
-func _on_readiness_passed() -> void:
-	readiness_quiz.hide()
-	_begin_launch()
-
-func _begin_launch() -> void:
-	if Engine.has_meta("astro_intro_seen") or auto_check or capture:
 		_start_game()
 	else:
 		music.stop()
@@ -573,13 +520,10 @@ func _show_briefing() -> void:
 	_update_controls()
 
 func _start_game() -> void:
-	Engine.set_meta("astro_intro_seen", true)
 	start_menu.hide()
 	intro.hide()
 	hud_root.show()
 	playing = true
-	days_until_rescue = RESCUE_WAIT_DAYS
-	rescue_day_clock = 0.0
 	if not music.playing: music.play()
 	if not base_music.playing: base_music.play()
 	feedback.transmit("start", "Estamos voltando. Mantenha-se seguro.")
@@ -616,34 +560,17 @@ func _update_hud(_delta: float) -> void:
 	vignette_material.set_shader_parameter("intensity", intensity)
 	vignette_material.set_shader_parameter("radiation", clampf(exposure / EXPOSURE_LIMIT, 0, 1) if not inside and not dead and solar_phase == "active" else 0.0)
 	_update_survival_timer()
-	if inventory_ui != null: inventory_ui.refresh()
 	if mission_map != null: mission_map.refresh()
-	_update_rescue_countdown_ui()
 
-func _advance_rescue_countdown(delta: float) -> void:
-	if days_until_rescue <= 0: return
-	rescue_day_clock += delta
-	while rescue_day_clock >= MISSION_DAY_SECONDS and days_until_rescue > 0:
-		rescue_day_clock -= MISSION_DAY_SECONDS
-		days_until_rescue -= 1
-		if days_until_rescue > 0 and communications_online:
-			feedback.transmit("rescue_day_%d" % days_until_rescue, tr("Mais um dia em Marte. Restam %d dias até o retorno da nave.") % days_until_rescue, true, feedback.AXIOS)
-	if days_until_rescue == 0:
-		if communications_online:
-			feedback.transmit("rescue_window", tr("A nave está em órbita. Complete os objetivos e mantenha o sinal para o pouso."), true, feedback.AXIOS)
-		_try_rescue()
-	_update_rescue_countdown_ui()
-
-func _update_rescue_countdown_ui() -> void:
-	if rescue_countdown_label == null: return
-	if days_until_rescue > 0:
-		rescue_countdown_label.text = tr("%02d DIAS") % days_until_rescue
-		rescue_status_label.text = tr("RETORNO DA NAVE")
-		rescue_countdown_label.add_theme_color_override("font_color", PEACH if days_until_rescue <= 2 else CREAM)
+func _update_camera_mode() -> void:
+	var outside_first_person := first_person and not inside
+	astronaut.visible = not outside_first_person
+	if inside:
+		camera.fov = 44.0
+	elif outside_first_person:
+		camera.fov = 68.0
 	else:
-		rescue_countdown_label.text = tr("EM ÓRBITA")
-		rescue_status_label.text = tr("AGUARDANDO SINAL E RECURSOS")
-		rescue_countdown_label.add_theme_color_override("font_color", MINT)
+		camera.fov = 36.0 if controls.mobile else THIRD_PERSON_FOV
 
 func _update_third_person_camera(smooth: bool = true, delta: float = 1.0) -> void:
 	if camera == null or avatar == null: return
@@ -654,7 +581,8 @@ func _update_third_person_camera(smooth: bool = true, delta: float = 1.0) -> voi
 		forward_reference = -avatar.global_basis.z.slide(normal).normalized()
 	var backward := -forward_reference
 	var target := avatar.global_position + normal * 1.25
-	var desired := avatar.global_position + normal * THIRD_PERSON_HEIGHT + backward * THIRD_PERSON_DISTANCE
+	var framing := 0.85 if controls != null and controls.mobile else 1.0
+	var desired := avatar.global_position + (normal * THIRD_PERSON_HEIGHT + backward * THIRD_PERSON_DISTANCE) * framing
 	_update_camera_transform(desired, target, normal, smooth, delta)
 
 func _update_camera_transform(desired: Vector3, target: Vector3, up: Vector3, smooth: bool, delta: float) -> void:
@@ -730,13 +658,8 @@ func _build_expansion() -> void:
 	feedback.typing_tick.connect(func(): event_audio.play("typing"))
 	feedback.transmission_started.connect(func(): event_audio.play("radio"))
 	guide = hud.get_node("FirstSteps")
-	readiness_quiz = hud.get_node("MissionReadinessQuiz")
-	readiness_quiz.passed.connect(_on_readiness_passed)
-	readiness_quiz.skipped.connect(_on_readiness_passed)
-	inventory_ui = hud.get_node("InventoryPanel")
-	inventory_ui.configure(self)
-	inventory_ui.inventory_changed.connect(_on_inventory_changed)
-	inventory_ui.use_item_requested.connect(_use_inventory_item)
+	task_question = hud.get_node("TaskQuestion")
+	task_question.closed.connect(_update_controls)
 	mission_map = hud.get_node("MissionMap")
 	mission_map.configure(self)
 	minigames = hud.get_node("BaseMinigames")
@@ -761,12 +684,13 @@ func _build_expansion() -> void:
 	GameOptions.language_changed.connect(func():
 		prompt_target = ""
 		intro.configure(material_icons, controls.mobile)
-		_update_rescue_countdown_ui()
 	)
+	hud.move_child(task_question, -1)
 	portrait_hint = PanelContainer.new()
 	portrait_hint.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	portrait_hint.add_theme_stylebox_override("panel", _style(Color("101215")))
-	var rotate_text := _label("Gire o celular.\nA missão continua.", 48, CREAM)
+	var rotate_text := _label(tr("Gire o celular para retomar a missão."), 48, CREAM)
+	GameOptions.language_changed.connect(func(): rotate_text.text = tr("Gire o celular para retomar a missão."))
 	rotate_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	rotate_text.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	portrait_hint.add_child(rotate_text)
@@ -788,14 +712,14 @@ func _layout_ui() -> void:
 	var view := get_viewport().get_visible_rect().size
 	var ui_layout: Node = $HUD/HUDBuilder
 	objectives_ui.position = Vector2(view.x - ui_layout.objectives_right_margin, ui_layout.objectives_top_margin)
+	controls._layout()
 	mission_map._layout()
-	inventory_ui._layout()
+	_update_camera_mode()
 	mute_ui.position = Vector2(view.x - ui_layout.sound_button_right_margin, ui_layout.sound_button_top_margin)
 	mute_ui.custom_minimum_size = ui_layout.sound_button_size
 	prompt.position = Vector2((view.x - 450) / 2, view.y - ui_layout.prompt_bottom_margin)
 	for modal in [death_panel]: _center_modal(modal)
 	portrait_hint.visible = controls.mobile and view.y > view.x
-	controls.reset()
 	_update_controls()
 
 func _center_modal(modal: Control) -> void:
@@ -804,8 +728,7 @@ func _center_modal(modal: Control) -> void:
 func _update_controls() -> void:
 	if controls == null: return
 	minigames.frozen = portrait_hint.visible or audio_settings.visible
-	var inventory_is_open: bool = inventory_ui != null and inventory_ui.opened
-	var active := playing and not dead and not won and not transitioning and not minigames.visible and not portrait_hint.visible and not audio_settings.visible and not inventory_is_open
+	var active := playing and not dead and not won and not transitioning and not minigames.visible and not portrait_hint.visible and not audio_settings.visible and not task_question.visible
 	controls.set_enabled(active)
 	controls.jump_available = not inside
 	_sync_resource_visibility()
@@ -816,11 +739,10 @@ func _update_controls() -> void:
 		prompt_target = ""
 	base_status.visible = playing and not intro_video.active and not won and not dead
 	power_label.visible = base_status.visible
-	power_label.text = tr("ENERGIA %d%%") % energy_charge if energy_ready else "ENERGIA OFF / O₂ OFF"
-	base_status.text = "RÁDIO ONLINE" if communications_online else "RÁDIO OFFLINE"
-	if inventory_ui != null: inventory_ui.visible = playing and not dead and not won
+	power_label.text = tr("ENERGIA %d%%") % energy_charge if energy_ready else tr("ENERGIA OFF / O₂ OFF")
+	base_status.text = tr("RÁDIO ONLINE") if communications_online else tr("RÁDIO OFFLINE")
 	if mission_map != null:
-		mission_map.visible = playing and not dead and not won and not inside and not intro_video.active and not minigames.visible and not audio_settings.visible and not inventory_is_open
+		mission_map.visible = playing and not dead and not won and not inside and not intro_video.active and not minigames.visible and not audio_settings.visible and not task_question.visible and not portrait_hint.visible
 
 func _publish_web_test_state() -> void:
 	var forward := (-camera.global_basis.z).slide(normal).normalized()
@@ -833,6 +755,10 @@ func _publish_web_test_state() -> void:
 	state["objective"] = guide.objective_id
 	state["route_points"] = guide.route.size()
 	state["logical_size"] = [get_viewport().get_visible_rect().size.x, get_viewport().get_visible_rect().size.y]
+	state["camera_fov"] = camera.fov
+	state["action_rect"] = [controls.action_rect.position.x, controls.action_rect.position.y, controls.action_rect.size.x, controls.action_rect.size.y]
+	state["jump_rect"] = [controls.jump_rect.position.x, controls.jump_rect.position.y, controls.jump_rect.size.x, controls.jump_rect.size.y]
+	state["elapsed"] = elapsed
 	state["settings"] = audio_settings.visible
 	state["caption"] = intro_video.caption.text if intro_video.active else ""
 	JavaScriptBridge.eval("window.__astroQA = %s;" % JSON.stringify(state))
@@ -858,27 +784,12 @@ func _update_prompt() -> void:
 		target = "food"
 		text = "Comer"
 	else:
-		var supply_near: int = $ExplorationSystem.nearest_supply()
-		if supply_near >= 0 and $ExplorationSystem.can_reach(supplies[supply_near]):
-			var supply_kind: String = supplies[supply_near].kind
-			if inventory_ui.can_add(supply_kind):
-				target = "supply"
-				text = "Coletar " + ("cilindro de O₂" if supply_kind == "oxygen_tube" else "ração")
-			else:
-				target = "full"
-				text = "Inventário cheio"
-		else:
-			var near := _nearest()
-			if near >= 0 and _can_reach(items[near]):
-				var item_id: String = ["stone", "antenna_part", "fuel_cell"][int(items[near].kind)]
-				if inventory_ui.can_add(item_id):
-					target = "collect"
-					text = "Coletar material"
-				else:
-					target = "full"
-					text = "Inventário cheio"
+		var near := _nearest()
+		if near >= 0 and _can_reach(items[near]):
+			target = "collect"
+			text = "Coletar material"
 	controls.action_text = text if not text.is_empty() else "Interagir"
-	controls.action_available = not target.is_empty() and target != "full"
+	controls.action_available = not target.is_empty()
 	controls.queue_redraw()
 	if target == prompt_target: return
 	prompt_target = target
@@ -913,12 +824,14 @@ func _transition_to(to_inside: bool) -> void:
 	transition_veil.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_update_controls()
 	_update_prompt()
+	if to_inside and solar_phase != "calm": _ask_task("radiation")
 
 func _apply_location(to_inside: bool) -> void:
 	if to_inside:
 		exterior_normal = normal
 		exterior_north = north
 	inside = to_inside
+	_update_camera_mode()
 	if inside: exposure = 0.0
 	hop = 0
 	altitude = 0.0 if inside else terrain.height_at(exterior_normal)
@@ -937,7 +850,7 @@ func _apply_location(to_inside: bool) -> void:
 		north = exterior_north
 		avatar.position = normal * (R + altitude)
 		_align(avatar, normal, north)
-		_update_third_person_camera(false)
+		$ExplorationSystem.update_exterior_camera(false, 0.0)
 	solar_fog.visible = not inside and solar_phase == "active"
 	_update_distant_light()
 	base_room.set_power(energy_ready, energy_charge)
@@ -972,9 +885,17 @@ func _update_energy(delta: float) -> void:
 
 func _on_power_repaired() -> void:
 	$MissionProgression.power_repaired()
+	if _ask_task("power"): minigames.close()
 
 func _on_signal_sent() -> void:
 	$MissionProgression.signal_sent()
+	if signal_transmitted: _ask_task("signal")
+
+func _ask_task(task: String) -> bool:
+	if not playing or dead or won or capture or "--smoke-test" in OS.get_cmdline_user_args(): return false
+	if not task_question.open_task(task): return false
+	_update_controls()
+	return true
 
 func _assert_world() -> void:
 	assert(items.size() == TOTAL)
