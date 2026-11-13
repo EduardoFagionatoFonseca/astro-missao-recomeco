@@ -59,7 +59,7 @@ func _ready() -> void:
 	balance.custom_minimum_size.x = 112
 	row.add_child(balance)
 	start = Button.new()
-	start.text = "TREINAR TRIPULAÇÃO   >"
+	start.text = "Começar"
 	start.custom_minimum_size = Vector2(560, 112)
 	start.add_theme_font_size_override("font_size", 36)
 	for state in ["normal", "hover", "pressed"]:

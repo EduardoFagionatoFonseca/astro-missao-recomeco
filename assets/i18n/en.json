@@ -52,8 +52,18 @@
   "Alinhe as ondas. Sustente por 3 s.": "Match the waves. Hold for 3 s.", "Buscando sinal…": "Searching for signal…", "FREQUÊNCIA": "FREQUENCY", "ALINHAMENTO": "ALIGNMENT",
   "Sinal %d%%  /  %s": "Signal %d%%  /  %s", "Transmitindo… %.1f / 3 s": "Transmitting… %.1f / 3 s", "Ajuste até estabilizar": "Adjust until stable", "SINAL RESTAURADO": "SIGNAL RESTORED",
   "Reúna peças": "Gather parts", "Volte ao abrigo": "Return to shelter", "Vá à estufa": "Visit the greenhouse", "Repare a energia": "Repair the power", "Restaure o sinal": "Restore the signal", "Entre no abrigo": "Get inside shelter",
-  "%02d DIAS": "%02d DAYS", "RETORNO DA NAVE": "SHIP RETURN",
-  "EM ÓRBITA": "IN ORBIT", "AGUARDANDO SINAL E RECURSOS": "AWAITING SIGNAL AND SUPPLIES",
-  "Mais um dia em Marte. Restam %d dias até o retorno da nave.": "Another day on Mars. %d days until the ship returns.",
-  "A nave está em órbita. Complete os objetivos e mantenha o sinal para o pouso.": "The ship is in orbit. Complete the objectives and keep the signal active for landing."
+  "Pular  >": "Skip  >",
+  "MAPA DA MISSÃO": "MISSION MAP",
+  "E": "G",
+  "B base   E estufa   ▲ você": "B base   G greenhouse   ▲ you",
+  "   M reduzir": "   M shrink",
+  "   M ampliar": "   M expand",
+  "Gire o celular para retomar a missão.": "Rotate your phone to resume the mission.",
+  "Continuar missão": "Continue mission",
+  "Tente outra resposta.": "Try another answer.",
+  "ENERGIA OFF / O₂ OFF": "POWER OFF / O₂ OFF",
+  "RÁDIO ONLINE": "RADIO ONLINE",
+  "RÁDIO OFFLINE": "RADIO OFFLINE",
+  "Visão em primeira pessoa (V)": "First-person view (V)",
+  "Visão de exploração (V)": "Exploration view (V)"
 }
