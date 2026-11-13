@@ -26,7 +26,10 @@ Envie **todos os arquivos** de `build/web` para hospedagem estática HTTPS, mant
 
 - Detecção combina identificação Android/iOS e capacidade de toque, incluindo iPadOS em modo desktop. Computadores touch continuam com a interface de computador. A largura da janela não ativa controles mobile.
 - Dedos independentes permitem mover e saltar/interagir simultaneamente. Não há corrida. Pausa, troca de tela, perda de foco e redimensionamento limpam os toques ativos.
-- A página respeita `safe-area-inset` e bloqueia scroll sobre o canvas. Na orientação vertical, movimento e entrada do puzzle aguardam o aparelho ser girado, mas recursos e eventos de sobrevivência continuam.
+- A página respeita `safe-area-inset` e bloqueia scroll sobre o canvas. Na orientação vertical, controles, puzzles e simulação de sobrevivência ficam pausados até o aparelho ser girado.
+- Botões de ação e salto ficam elevados, com pelo menos 86 pixels CSS livres abaixo da ação para acomodar o selo flutuante do Netlify. O espaço é recalculado na rotação e no redimensionamento.
+- No celular, o campo de visão externo passa de 44° para 36°, ampliando o planeta e o astronauta em cerca de 24%. O interior mantém 44° para preservar a visão das estações.
+- `node tests/web_mobile_layout.cjs` valida 915×412, 667×375 e 844×390, salto por toque com selo simulado e pausa/retomada na rotação.
 - Vídeo Theora 960×540/24 fps reproduzido pelo Godot após Iniciar, com legendas separadas. Falha/travamento do decoder tem texto de contexto e limite de duração. Pular fica disponível desde o início.
 
 Chrome desktop e emulação Android foram exercitados localmente. **Safari/iPhone, Android físico, recortes e desempenho em aparelhos reais ainda precisam de validação.**

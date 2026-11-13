@@ -483,6 +483,8 @@ func _process(delta: float) -> void:
 		outro_video._finish()
 		return
 	_update_controls()
+	# Rotation blocks input; freeze survival too, so the player can safely turn the phone.
+	if portrait_hint.visible: return
 	feedback.tick(delta)
 	if not playing or won or dead: return
 	elapsed += delta
@@ -1169,6 +1171,11 @@ func _build_expansion() -> void:
 	_layout_ui()
 	_update_controls()
 
+func _update_camera_framing() -> void:
+	# Narrower vertical field of view brings the terrain and astronaut closer on
+	# wide phone screens without changing movement, collision or camera tracking.
+	camera.fov = 36.0 if controls.mobile and not inside else 44.0
+
 func _layout_ui() -> void:
 	var view := get_viewport().get_visible_rect().size
 	objectives_ui.position = Vector2(view.x - 810, 28)
@@ -1176,6 +1183,7 @@ func _layout_ui() -> void:
 	mute_ui.custom_minimum_size = Vector2(100, 72)
 	prompt.position = Vector2((view.x - 450) / 2, view.y - 112)
 	for modal in [death_panel]: _center_modal(modal)
+	_update_camera_framing()
 	portrait_hint.visible = controls.mobile and view.y > view.x
 	controls.reset()
 	_update_controls()
@@ -1211,6 +1219,10 @@ func _publish_web_test_state() -> void:
 	state["objective"] = guide.objective_id
 	state["route_points"] = guide.route.size()
 	state["logical_size"] = [get_viewport().get_visible_rect().size.x, get_viewport().get_visible_rect().size.y]
+	state["camera_fov"] = camera.fov
+	state["action_rect"] = [controls.action_rect.position.x, controls.action_rect.position.y, controls.action_rect.size.x, controls.action_rect.size.y]
+	state["jump_rect"] = [controls.jump_rect.position.x, controls.jump_rect.position.y, controls.jump_rect.size.x, controls.jump_rect.size.y]
+	state["elapsed"] = elapsed
 	state["settings"] = audio_settings.visible
 	state["caption"] = intro_video.caption.text if intro_video.active else ""
 	JavaScriptBridge.eval("window.__astroQA = %s;" % JSON.stringify(state))
@@ -1282,6 +1294,7 @@ func _apply_location(to_inside: bool) -> void:
 		exterior_normal = normal
 		exterior_north = north
 	inside = to_inside
+	_update_camera_framing()
 	if inside: exposure = 0.0
 	hop = 0
 	altitude = 0 if inside else terrain.height_at(exterior_normal)

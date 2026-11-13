@@ -39,8 +39,16 @@ func _ready() -> void:
 func _layout() -> void:
 	var view := get_viewport_rect().size
 	stick_center = Vector2(172, view.y - 174)
-	action_rect = Rect2(view.x - 310, view.y - 195, 258, 100)
-	jump_rect = Rect2(view.x - 252, view.y - 325, 200, 104)
+	# Reserve at least 86 CSS pixels for the Netlify badge and browser edge.
+	# Godot stretches the logical viewport: a fixed logical gap shrinks on phones.
+	var bottom_gap := 95.0
+	if mobile:
+		var css_height := float(DisplayServer.window_get_size().y)
+		if OS.has_feature("web"):
+			css_height = float(JavaScriptBridge.eval("window.visualViewport ? window.visualViewport.height : window.innerHeight"))
+		bottom_gap = maxf(190.0, 86.0 * view.y / maxf(css_height, 1.0))
+	action_rect = Rect2(view.x - 310, view.y - bottom_gap - 100, 258, 100)
+	jump_rect = Rect2(view.x - 252, action_rect.position.y - 130, 200, 104)
 	reset()
 
 func set_enabled(value: bool) -> void:
