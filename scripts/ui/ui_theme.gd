@@ -10,20 +10,20 @@ static func box(color := PANEL, border := EDGE, inset := 16) -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()
 	style.bg_color = color
 	style.border_color = border
-	style.set_border_width_all(2)
-	style.set_corner_radius_all(4)
+	style.set_border_width_all(1)
+	style.set_corner_radius_all(9)
 	style.shadow_color = Color("00000055")
-	style.shadow_size = 3
-	style.shadow_offset = Vector2(0, 4)
+	style.shadow_size = 5
+	style.shadow_offset = Vector2(0, 3)
 	style.content_margin_left = inset
 	style.content_margin_right = inset
-	style.content_margin_top = inset
-	style.content_margin_bottom = inset
+	style.content_margin_top = maxi(inset - 3, 0)
+	style.content_margin_bottom = maxi(inset - 3, 0)
 	return style
 
 static func create() -> Theme:
 	var theme := Theme.new()
-	theme.default_font_size = 30
+	theme.default_font_size = 24
 	for type in ["Label", "Button", "CheckButton"]:
 		theme.set_color("font_color", type, TEXT)
 		theme.set_color("font_hover_color", type, Color.WHITE)
@@ -31,7 +31,7 @@ static func create() -> Theme:
 		theme.set_color("font_disabled_color", type, Color("7b8389"))
 	theme.set_stylebox("panel", "PanelContainer", box())
 	theme.set_stylebox("panel", "Panel", box())
-	theme.set_stylebox("normal", "Button", box(Color("30363e")))
+	theme.set_stylebox("normal", "Button", box(Color("30363e"), Color("4b545c")))
 	theme.set_stylebox("hover", "Button", box(Color("414b54"), ACCENT))
 	theme.set_stylebox("pressed", "Button", box(Color("20272b"), ACCENT))
 	theme.set_stylebox("disabled", "Button", box(Color("202428"), Color("343b42")))

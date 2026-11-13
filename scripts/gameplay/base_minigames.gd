@@ -61,7 +61,7 @@ class CableDiagram extends Control:
 			for point in [a, b]: draw_circle(point, 8, game.COLORS[i])
 
 func _ready() -> void:
-	theme = preload("res://scripts/ui_theme.gd").create()
+	theme = preload("res://scripts/ui/ui_theme.gd").create()
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var dim := ColorRect.new()
 	dim.color = Color("050608e8")

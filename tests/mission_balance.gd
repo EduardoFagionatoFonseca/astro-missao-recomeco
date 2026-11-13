@@ -44,7 +44,7 @@ func run(game: Node3D) -> void:
 	game.energy_charge = 100
 	game._update_hud(0)
 	assert(game.power_label.modulate.a == 1)
-	var writer := preload("res://scripts/typewriter.gd").new()
+	var writer := preload("res://scripts/ui/typewriter.gd").new()
 	writer.begin(feedback.dialogue, "Estamos chegando.")
 	assert(feedback.dialogue.visible_characters == 0)
 	writer.advance(0.04)

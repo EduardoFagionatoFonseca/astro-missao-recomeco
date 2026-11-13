@@ -1,0 +1,6 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/gameplay/base_minigames.gd" id="1"]
+
+[node name="BaseMinigames" type="Control"]
+script = ExtResource("1")

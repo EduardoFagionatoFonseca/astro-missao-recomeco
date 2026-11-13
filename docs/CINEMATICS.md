@@ -7,7 +7,7 @@
 3. 11–16,5 s: rádio e promessa da tripulação.
 4. 16,5–22 s: abrigo isolado e objetivo de sobrevivência.
 
-Legendas em português em `scripts/intro_video.gd` acompanham o vídeo. Botão, toque, Espaço, Enter ou Esc permitem pular. Depois do vídeo vem o guia da missão, com recursos e eventos suspensos; a partida só começa ao confirmar o guia. Reiniciar a cena conserva a marca de vídeo visto na sessão; em nova abertura, ele reaparece.
+Legendas em português em `scripts/gameplay/intro_video.gd` acompanham o vídeo. Botão, toque, Espaço, Enter ou Esc permitem pular. Depois do vídeo vem o guia da missão, com recursos e eventos suspensos; a partida só começa ao confirmar o guia. Reiniciar a cena conserva a marca de vídeo visto na sessão; em nova abertura, ele reaparece.
 
 Para regenerar, instale Pillow e numpy no Python e use FFmpeg com libtheora/libvorbis:
 
@@ -22,3 +22,7 @@ O gerador também grava `docs/intro-storyboard.png`. Não é necessário regener
 `assets/cinematics/outro.ogv`: vídeo original de 14 segundos, 960×540 a 24 fps, no mesmo estilo ilustrado da abertura. Mostra ignição, subida e Marte ficando para trás, com trilha sintetizada e ruído de motor originais. Não utiliza mídia externa. Gere com `python tools/generate_outro.py --ffmpeg /caminho/ffmpeg`.
 
 Embarcar congela a partida e inicia o vídeo. Finalizar ou pular recarrega a cena e retorna automaticamente ao menu principal, com missão nova e volumes preservados. As opções de pular são iguais às da introdução. O guia inicial tem duas páginas; apenas **Começar**, na segunda, inicia recursos e eventos.
+
+## Treinamento da tripulação
+
+Antes da introdução, o botão **Treinar Tripulação** apresenta cinco cenas curtas ilustradas, uma para cada pergunta do questionário. Cada cena anima uma situação de missão, mostra duas legendas narrativas e segue automaticamente para a pergunta; **Pular**, Espaço, Enter ou Esc avançam imediatamente. Temas e legendas editáveis ficam em `data/mission_readiness.json`; a arte desenhada e as animações ficam em `scripts/ui/mission_quiz_cutscene.gd`. A nota mínima continua sendo exigida mesmo ao pular as cenas.

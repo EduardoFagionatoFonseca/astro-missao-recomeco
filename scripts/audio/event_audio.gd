@@ -90,5 +90,5 @@ func _synthesize(kind: String) -> AudioStreamWAV:
 	stream.data = data
 	if kind == "fog":
 		stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
-		stream.loop_end = data.size() / 2
+		stream.loop_end = int(data.size() / 2.0)
 	return stream

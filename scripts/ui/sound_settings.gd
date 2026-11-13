@@ -10,7 +10,7 @@ var values: Array[Label] = []
 var panel: PanelContainer
 
 func _ready() -> void:
-	theme = preload("res://scripts/ui_theme.gd").create()
+	theme = preload("res://scripts/ui/ui_theme.gd").create()
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var config := ConfigFile.new()
 	config.load("user://audio.cfg")
@@ -30,7 +30,7 @@ func _ready() -> void:
 	add_child(shade)
 	panel = PanelContainer.new()
 	panel.custom_minimum_size = Vector2(920, 0)
-	panel.add_theme_stylebox_override("panel", preload("res://scripts/ui_theme.gd").box(Color("171c23"), Color("4b5862"), 36))
+	panel.add_theme_stylebox_override("panel", preload("res://scripts/ui/ui_theme.gd").box(Color("171c23"), Color("4b5862"), 36))
 	add_child(panel)
 	var body := VBoxContainer.new()
 	body.add_theme_constant_override("separation", 12)
@@ -74,10 +74,10 @@ func _ready() -> void:
 	_layout()
 	hide()
 
-func _label(parent: Node, text: String, size: int, color := Color("f2f1e9")) -> Label:
+func _label(parent: Node, text: String, font_size: int, color := Color("f2f1e9")) -> Label:
 	var label := Label.new()
 	label.text = text
-	label.add_theme_font_size_override("font_size", size)
+	label.add_theme_font_size_override("font_size", font_size)
 	label.add_theme_color_override("font_color", color)
 	parent.add_child(label)
 	return label
@@ -89,7 +89,7 @@ func _set_volume(bus: String, value: float, save := true) -> void:
 
 func _save_volumes() -> void:
 	var config := ConfigFile.new()
-	for name in BUSES: config.set_value("volume", name, volumes[name])
+	for bus_name in BUSES: config.set_value("volume", bus_name, volumes[bus_name])
 	config.set_value("settings", "music_scale_version", MUSIC_SCALE_VERSION)
 	config.save("user://audio.cfg")
 

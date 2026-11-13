@@ -7,7 +7,7 @@ var start: Button
 var gear: Button
 
 func _ready() -> void:
-	theme = preload("res://scripts/ui_theme.gd").create()
+	theme = preload("res://scripts/ui/ui_theme.gd").create()
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var art := TextureRect.new()
 	art.texture = preload("res://assets/ui/menu-mars-2d.png")
@@ -19,11 +19,11 @@ func _ready() -> void:
 	var shade := ColorRect.new()
 	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	shade.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var material := ShaderMaterial.new()
+	var shade_material := ShaderMaterial.new()
 	var shader := Shader.new()
 	shader.code = "shader_type canvas_item; void fragment(){ float edge=0.28+0.22*smoothstep(0.45,1.0,UV.y); COLOR=vec4(0.015,0.035,0.06,edge); }"
-	material.shader = shader
-	shade.material = material
+	shade_material.shader = shader
+	shade.material = shade_material
 	add_child(shade)
 	content = VBoxContainer.new()
 	content.add_theme_constant_override("separation", 12)
@@ -59,12 +59,12 @@ func _ready() -> void:
 	balance.custom_minimum_size.x = 112
 	row.add_child(balance)
 	start = Button.new()
-	start.text = "COMEÇAR   >"
+	start.text = "TREINAR TRIPULAÇÃO   >"
 	start.custom_minimum_size = Vector2(560, 112)
 	start.add_theme_font_size_override("font_size", 36)
 	for state in ["normal", "hover", "pressed"]:
 		var color: Color = {"normal": Color("c99c76"), "hover": Color("dfb28a"), "pressed": Color("aa7958")}[state]
-		start.add_theme_stylebox_override(state, preload("res://scripts/ui_theme.gd").box(color, Color("e9c6a0"), 20))
+		start.add_theme_stylebox_override(state, preload("res://scripts/ui/ui_theme.gd").box(color, Color("e9c6a0"), 20))
 	start.add_theme_color_override("font_color", Color("241e1a"))
 	start.add_theme_color_override("font_hover_color", Color("241e1a"))
 	start.add_theme_color_override("font_pressed_color", Color("241e1a"))
@@ -82,11 +82,11 @@ func _ready() -> void:
 	actions.resized.connect(_layout)
 	_layout()
 
-func _text(text: String, size: int, color := Color("f2f1e9")) -> void:
+func _text(text: String, font_size: int, color := Color("f2f1e9")) -> void:
 	var label := Label.new()
 	label.text = text
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	label.add_theme_font_size_override("font_size", size)
+	label.add_theme_font_size_override("font_size", font_size)
 	label.add_theme_color_override("font_color", color)
 	content.add_child(label)
 
