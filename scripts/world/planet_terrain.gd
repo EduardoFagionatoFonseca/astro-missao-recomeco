@@ -1,6 +1,6 @@
 extends RefCounted
 ## Shared radial height field: the render mesh and player feet use the same surface.
-const R := 12.0
+var R := 32.0
 var craters: Array[Dictionary] = []
 var platforms: Array[Dictionary] = []
 var hills: Array[Dictionary] = []
@@ -9,8 +9,8 @@ func _init() -> void:
 	# A small practice ledge near the shelter, clear of its door and oxygen zone.
 	platforms.append({"normal": Vector3(-0.34, 1, -0.25).normalized(), "radius": 0.95, "height": 0.38})
 	craters.append({"normal": Vector3(0.38, 1, -0.26).normalized(), "radius": 1.05})
-	for i in range(18):
-		var y := 1.0 - (float(i) + 0.5) / 18 * 2
+	for i in range(60):
+		var y := 1.0 - (float(i) + 0.5) / 60 * 2
 		var a := i * 2.39996323
 		var n := Vector3(cos(a) * sqrt(1 - y*y), y, sin(a) * sqrt(1 - y*y))
 		if n.dot(Vector3.UP) > 0.85 or n.dot(Vector3(0.9, -0.15, -0.5).normalized()) > 0.91: continue

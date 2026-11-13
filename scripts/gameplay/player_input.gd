@@ -9,6 +9,7 @@ var movement := Vector2.ZERO
 var stick_id := -1
 var stick_center := Vector2(168, 700)
 var stick_radius := 100.0
+var control_scale := 1.0
 var action_rect := Rect2()
 var jump_rect := Rect2()
 var action_text := "Interagir"
@@ -31,24 +32,23 @@ func _ready() -> void:
 	for action: String in bindings:
 		for key: int in bindings[action]:
 			var event := InputEventKey.new()
-			event.physical_keycode = key
+			event.physical_keycode = key as Key
 			if not InputMap.action_has_event(action, event): InputMap.action_add_event(action, event)
 	get_viewport().size_changed.connect(_layout)
 	_layout()
 
 func _layout() -> void:
 	var view := get_viewport_rect().size
-	stick_center = Vector2(172, view.y - 174)
-	# Reserve at least 86 CSS pixels for the Netlify badge and browser edge.
-	# Godot stretches the logical viewport: a fixed logical gap shrinks on phones.
-	var bottom_gap := 95.0
-	if mobile:
-		var css_height := float(DisplayServer.window_get_size().y)
-		if OS.has_feature("web"):
-			css_height = float(JavaScriptBridge.eval("window.visualViewport ? window.visualViewport.height : window.innerHeight"))
-		bottom_gap = maxf(190.0, 86.0 * view.y / maxf(css_height, 1.0))
-	action_rect = Rect2(view.x - 310, view.y - bottom_gap - 100, 258, 100)
-	jump_rect = Rect2(view.x - 252, action_rect.position.y - 130, 200, 104)
+	if view.x <= 0.0 or view.y <= 0.0: return
+	control_scale = clampf(minf(view.x / 800.0, view.y / 450.0), 0.62, 1.0)
+	var margin := 20.0 * control_scale
+	var button_width := minf(260.0 * control_scale, view.x * 0.39)
+	var button_height := maxf(54.0, 78.0 * control_scale)
+	var button_gap := 12.0 * control_scale
+	stick_radius = clampf(minf(view.x, view.y) * 0.16, 62.0, 96.0)
+	stick_center = Vector2(maxf(stick_radius + margin, view.x * 0.19), view.y - stick_radius - margin)
+	action_rect = Rect2(view.x - button_width - margin, view.y - button_height - margin, button_width, button_height)
+	jump_rect = Rect2(view.x - button_width - margin, action_rect.position.y - button_height - button_gap, button_width, button_height)
 	reset()
 
 func set_enabled(value: bool) -> void:
@@ -109,9 +109,9 @@ func _update_stick(at: Vector2) -> void:
 
 func _draw() -> void:
 	if not mobile or not enabled: return
-	draw_circle(stick_center, stick_radius, Color("191c2199"))
-	draw_arc(stick_center, stick_radius, 0, TAU, 64, Color("b7d8bf99"), 3, true)
-	draw_circle(stick_center + Vector2(movement.x, -movement.y) * stick_radius * 0.65, 39, Color("b7d8bfcc"))
+	draw_circle(stick_center, stick_radius, Color("10151caa"))
+	draw_arc(stick_center, stick_radius, 0, TAU, 64, Color("b7d8bfbb"), 2.5 * control_scale, true)
+	draw_circle(stick_center + Vector2(movement.x, -movement.y) * stick_radius * 0.62, 31.0 * control_scale, Color("d4e5d7dd"))
 	_draw_button(action_rect, action_text, Color("f2ba90ef") if action_available else Color("a3b7c477"))
 	_draw_button(jump_rect, "Saltar", Color("b7d8bfdd") if jump_available else Color("a3b7c455"))
 
@@ -121,8 +121,9 @@ func _draw_button(rect: Rect2, text: String, color: Color) -> void:
 	style.bg_color = Color("191c21ef")
 	style.border_color = color
 	style.set_border_width_all(2)
-	style.set_corner_radius_all(4)
+	style.set_corner_radius_all(roundi(16.0 * control_scale))
 	draw_style_box(style, rect)
 	var font := ThemeDB.fallback_font
-	var width := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, 28).x
-	draw_string(font, rect.position + Vector2((rect.size.x - width) / 2, rect.size.y / 2 + 10), text, HORIZONTAL_ALIGNMENT_LEFT, -1, 28, color)
+	var font_size := roundi(25.0 * control_scale)
+	var width := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
+	draw_string(font, rect.position + Vector2((rect.size.x - width) / 2, rect.size.y / 2 + font_size * 0.34), text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, color)

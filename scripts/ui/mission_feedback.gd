@@ -18,12 +18,12 @@ var notice: PanelContainer
 var notice_label: Label
 var wash: ColorRect
 var radio_tween: Tween
-var dialogue_writer := preload("res://scripts/typewriter.gd").new()
-var notice_writer := preload("res://scripts/typewriter.gd").new()
+var dialogue_writer := preload("res://scripts/ui/typewriter.gd").new()
+var notice_writer := preload("res://scripts/ui/typewriter.gd").new()
 var notice_tween: Tween
 
 func _ready() -> void:
-	theme = preload("res://scripts/ui_theme.gd").create()
+	theme = preload("res://scripts/ui/ui_theme.gd").create()
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	wash = ColorRect.new()
@@ -70,11 +70,11 @@ func _panel() -> PanelContainer:
 	add_child(panel)
 	return panel
 
-func _label(text: String, size: int, color: Color) -> Label:
+func _label(text: String, font_size: int, color: Color) -> Label:
 	var label := Label.new()
 	label.text = text
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	label.add_theme_font_size_override("font_size", size)
+	label.add_theme_font_size_override("font_size", font_size)
 	label.add_theme_color_override("font_color", color)
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	return label

@@ -10,7 +10,7 @@ Nas configurações, **Português / English** altera menus, guia, HUD, minigames
 
 ## Jogar
 
-No Windows, abra **Jogar.cmd**. O iniciador usa o Godot instalado na pasta Downloads deste computador, no PATH ou na variável `GODOT_EXE`. Para editar, importe `project.godot` no Godot 4.7 e pressione F5. Não há dependências de rede ou plugins.
+No Windows, abra **Jogar.cmd**. O iniciador usa o Godot instalado na pasta Downloads deste computador, no PATH ou na variável `GODOT_EXE`. Para editar, importe `project.godot` no Godot 4.7 e pressione F5. Não há dependências de rede ou plugins. Para entender a árvore de cenas e onde ajustar cada parte, consulte [docs/EDITING.md](docs/EDITING.md).
 
 - WASD ou setas: caminhar por toda a superfície esférica.
 - Espaço: saltar sobre bordas e subir plataformas baixas. Movimento em velocidade fixa de 3,8934 m/s (+3%); não há corrida.

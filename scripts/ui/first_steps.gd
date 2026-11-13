@@ -69,9 +69,9 @@ func update_guide(state: Node3D, delta: float) -> void:
 	caption = {"solar": "Entre no abrigo", "oxygen": "Recupere oxigênio", "energy": "Repare a energia", "food": "Encontre comida", "signal": "Restaure o sinal", "parts": "Reúna peças", "supplies": "Reúna suprimentos", "rescue": "Aguarde no abrigo"}[objective_id]
 	destination = game.camp_normal * game.R
 	if objective_id == "food":
-		destination = game.base_room.position + game.base_room.STATIONS.exit if game.inside else game.garden_normal * game.R
+		destination = game.base_room.position + game.base_room.station_positions["exit"] if game.inside else game.garden_normal * game.R
 	elif objective_id in ["parts", "supplies"]:
-		if game.inside: destination = game.base_room.position + game.base_room.STATIONS.exit
+		if game.inside: destination = game.base_room.position + game.base_room.station_positions["exit"]
 		else:
 			var closest := -2.0
 			for item in game.items:
@@ -82,8 +82,8 @@ func update_guide(state: Node3D, delta: float) -> void:
 		caption = "Embarque na nave"
 		destination = game.ship_normal * game.R
 	elif game.inside:
-		if objective_id == "energy" or (objective_id == "oxygen" and not game.energy_ready): destination = game.base_room.position + game.base_room.STATIONS.energy
-		elif objective_id == "signal": destination = game.base_room.position + game.base_room.STATIONS.signal
+		if objective_id == "energy" or (objective_id == "oxygen" and not game.energy_ready): destination = game.base_room.position + game.base_room.station_positions["energy"]
+		elif objective_id == "signal": destination = game.base_room.position + game.base_room.station_positions["signal"]
 		else: destination = game.avatar.global_position
 	_build_route()
 	hint.text = tr(caption)

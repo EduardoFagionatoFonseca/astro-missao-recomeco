@@ -13,14 +13,14 @@ var item_icons: Array[Texture2D] = []
 var page_tween: Tween
 
 func _ready() -> void:
-	theme = preload("res://scripts/ui_theme.gd").create()
+	theme = preload("res://scripts/ui/ui_theme.gd").create()
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var shade := ColorRect.new()
 	shade.color = Color("030405ec")
 	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(shade)
 	panel = PanelContainer.new()
-	panel.add_theme_stylebox_override("panel", preload("res://scripts/ui_theme.gd").box(Color("17191dfc"), Color("494e56"), 34))
+	panel.add_theme_stylebox_override("panel", preload("res://scripts/ui/ui_theme.gd").box(Color("17191dfc"), Color("494e56"), 34))
 	add_child(panel)
 	content = VBoxContainer.new()
 	content.add_theme_constant_override("separation", 24)
@@ -49,10 +49,10 @@ func _ready() -> void:
 	_layout()
 	hide()
 
-func _text(parent: Node, text: String, size: int, color := Color("f2f1e9")) -> Label:
+func _text(parent: Node, text: String, font_size: int, color := Color("f2f1e9")) -> Label:
 	var label := Label.new()
 	label.text = text
-	label.add_theme_font_size_override("font_size", size)
+	label.add_theme_font_size_override("font_size", font_size)
 	label.add_theme_color_override("font_color", color)
 	parent.add_child(label)
 	return label

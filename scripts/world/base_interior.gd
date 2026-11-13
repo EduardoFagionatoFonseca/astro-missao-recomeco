@@ -1,7 +1,18 @@
 extends Node3D
 ## A roofless room with solid furniture footprints and a fixed readable camera.
-const STATIONS := {"energy": Vector3(-3.6, 0, -1.6), "signal": Vector3(3.6, 0, -1.6), "exit": Vector3(0, 0, 3.0)}
-const BLOCKERS := [Rect2(-4.6, -2.6, 1.8, 2.0), Rect2(2.8, -2.6, 1.8, 2.0), Rect2(-4.6, 1.0, 1.6, 1.8)]
+@export_group("Pontos de interação")
+@export var station_positions: Dictionary = {
+	"energy": Vector3(-3.6, 0, -1.6),
+	"signal": Vector3(3.6, 0, -1.6),
+	"exit": Vector3(0, 0, 3.0)
+}
+
+@export_group("Colisão dos móveis")
+@export var furniture_blockers: Array[Rect2] = [
+	Rect2(-4.6, -2.6, 1.8, 2.0),
+	Rect2(2.8, -2.6, 1.8, 2.0),
+	Rect2(-4.6, 1.0, 1.6, 1.8)
+]
 var lights: Array[MeshInstance3D] = []
 var status: Label3D
 var window_glass: MeshInstance3D
@@ -37,8 +48,8 @@ func _ready() -> void:
 		var screen := _box(Vector3(1.35, 0.12, 1.2), Vector3(x, 0.87, -1.6), Color("182e41"))
 		screen.rotation.x = -0.22
 		for i in range(3):
-			var lamp := _box(Vector3(0.23, 0.04, 0.09), Vector3(x - 0.4 + i * 0.4, 0.98, -1.35), Color("f2ba90"))
-			lights.append(lamp)
+			var indicator := _box(Vector3(0.23, 0.04, 0.09), Vector3(x - 0.4 + i * 0.4, 0.98, -1.35), Color("f2ba90"))
+			lights.append(indicator)
 	_label("ENERGIA", Vector3(-3.6, 1.8, -2.4), 34)
 	_label("COMUNICAÇÃO", Vector3(3.5, 1.8, -2.4), 30)
 	status = _label("O₂ ONLINE", Vector3(0, 2.8, -3.5), 30)
@@ -47,12 +58,12 @@ func _ready() -> void:
 	_box(Vector3(0.8, 0.23, 0.35), Vector3(-3.9, 0.6, 1.45), Color("e7dfc9"))
 	_box(Vector3(2.5, 0.04, 0.9), Vector3(0, 0.02, 3.35), Color("f2ba90"))
 	_label("SAÍDA", Vector3(0, 0.18, 3.5), 30)
-	var lamp := OmniLight3D.new()
-	lamp.position = Vector3(0, 5, 0)
-	lamp.omni_range = 16
-	lamp.light_color = Color("ffe8bf")
-	lamp.light_energy = 2.0
-	add_child(lamp)
+	var ceiling_lamp := OmniLight3D.new()
+	ceiling_lamp.position = Vector3(0, 5, 0)
+	ceiling_lamp.omni_range = 16
+	ceiling_lamp.light_color = Color("ffe8bf")
+	ceiling_lamp.light_energy = 2.0
+	add_child(ceiling_lamp)
 	visible = false
 
 func _box(size: Vector3, at: Vector3, color: Color) -> MeshInstance3D:
@@ -68,10 +79,10 @@ func _box(size: Vector3, at: Vector3, color: Color) -> MeshInstance3D:
 	node.position = at
 	return node
 
-func _label(text: String, at: Vector3, size: int) -> Label3D:
+func _label(text: String, at: Vector3, font_size: int) -> Label3D:
 	var label := Label3D.new()
 	label.text = text
-	label.font_size = size
+	label.font_size = font_size
 	label.pixel_size = 0.009
 	label.outline_size = 1
 	label.outline_modulate = Color("e9e5d9")
@@ -93,20 +104,20 @@ func move_player(from: Vector3, direction: Vector3) -> Vector3:
 	return position + next
 
 func _blocked(at: Vector3) -> bool:
-	for rect: Rect2 in BLOCKERS:
+	for rect: Rect2 in furniture_blockers:
 		if rect.grow(0.22).has_point(Vector2(at.x, at.z)): return true
 	return false
 
 func station_at(at: Vector3) -> String:
 	var local := at - position
-	for key: String in STATIONS:
-		if local.distance_to(STATIONS[key]) < (1.95 if key != "exit" else 1.1): return key
+	for key: String in station_positions:
+		if local.distance_to(station_positions[key]) < (1.95 if key != "exit" else 1.1): return key
 	return ""
 
-func set_power(ready: bool, charge: float) -> void:
-	status.text = tr("O₂ ONLINE / %d%%") % charge if ready else "O₂ OFFLINE"
+func set_power(power_available: bool, charge: float) -> void:
+	status.text = tr("O₂ ONLINE / %d%%") % charge if power_available else "O₂ OFFLINE"
 	for light in lights:
-		light.material_override.albedo_color = Color("b7d8bf") if ready else Color("f2ba90")
+		light.material_override.albedo_color = Color("b7d8bf") if power_available else Color("f2ba90")
 
 func set_solar(phase: String) -> void:
 	var unsafe := phase != "calm"
@@ -114,7 +125,7 @@ func set_solar(phase: String) -> void:
 	material.albedo_color = Color("ffe2a8") if unsafe else Color("875d4e")
 	material.emission_enabled = unsafe
 	material.emission = Color("ffce7b")
-	material.emission_energy_multiplier = 1.5 if unsafe else 0
-	window_light.light_energy = 1.3 if unsafe else 0
+	material.emission_energy_multiplier = 1.5 if unsafe else 0.0
+	window_light.light_energy = 1.3 if unsafe else 0.0
 	weather.text = "RADIAÇÃO" if unsafe else "SEGURO"
 	weather.modulate = Color("8c441e") if unsafe else Color("304c39")
