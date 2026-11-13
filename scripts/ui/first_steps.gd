@@ -40,7 +40,7 @@ func update_guide(state: Node3D, _delta: float) -> void:
 		"food": food <= reserve_threshold,
 		"energy": game.energy_charge <= 30,
 		"signal": not game.communications_online or (game.found[1] >= game.GOALS[1] and not game.signal_transmitted),
-		"solar": game.solar_phase == "active" or (game.solar_phase == "warning" and game.communications_online and game.solar_clock >= game.SOLAR_WARNING - 5),
+		"solar": game.solar_phase in ["warning", "active"],
 		"parts": game.found[1] < (game.GOALS[1] if continuous else 2)
 	}
 	var resolved := {"oxygen": oxy >= 80, "food": food >= 80, "energy": game.energy_charge > 90, "signal": game.signal_transmitted and game.communications_online, "solar": game.inside or game.solar_phase == "calm", "parts": not needs.parts}

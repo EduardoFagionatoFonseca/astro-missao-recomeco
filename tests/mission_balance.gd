@@ -1,7 +1,7 @@
 extends RefCounted
 
 func run(game: Node3D) -> void:
-	assert(is_equal_approx(game.MOVE_SPEED, 3.78 * 1.03))
+	assert(is_equal_approx(game.MOVE_SPEED, 3.8934 * 1.5))
 	assert(not InputMap.has_action("run"))
 	var feedback: Control = game.feedback
 	feedback.set_link(true)

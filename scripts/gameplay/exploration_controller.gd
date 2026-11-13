@@ -13,7 +13,6 @@ func update_movement(delta: float) -> void:
 	if forward.length() < 0.1: forward = game.north
 	var right: Vector3 = game.camera.global_basis.x.slide(game.normal).normalized()
 	if GameOptions.chase_camera and not game.first_person:
-		forward = chase.steering_forward(game.normal, forward, input.length() > 0.05)
 		right = forward.cross(game.normal).normalized()
 	var direction: Vector3 = right * input.x + forward * input.y
 	if direction.length() > 0.05:
@@ -24,7 +23,6 @@ func update_movement(delta: float) -> void:
 			game.normal = candidate
 		var transport := Quaternion(old, game.normal)
 		game.north = (transport * game.north).slide(game.normal).normalized()
-		chase.transport(old, game.normal)
 		if GameOptions.chase_camera and not game.first_person:
 			var facing: Vector3 = (transport * -game.avatar.basis.z).slide(game.normal).normalized()
 			var angle := facing.signed_angle_to(direction.slide(game.normal).normalized(), game.normal)
@@ -48,14 +46,14 @@ func update_movement(delta: float) -> void:
 	game.avatar.position = game.normal * (game.R + game.altitude)
 	game.astronaut.position.y = absf(sin(game.walk)) * input.length() * 0.055
 	game.astronaut.rotation.z = sin(game.walk) * input.length() * 0.045
-	update_exterior_camera(true, delta)
+	update_exterior_camera(true, delta, input.length() > 0.05)
 
-func update_exterior_camera(smooth: bool, delta: float) -> void:
+func update_exterior_camera(smooth: bool, delta: float, moving := false) -> void:
 	if game.first_person:
 		var desired: Vector3 = game.avatar.global_position + game.normal * 1.48
 		game._update_camera_transform(desired, desired + game.north * 12.0, game.normal, smooth, delta)
 	elif GameOptions.chase_camera and smooth:
-		chase.update(game, delta)
+		chase.update(game, delta, moving)
 	else:
 		chase.reset()
 		game._update_third_person_camera(smooth, delta)
