@@ -2,8 +2,11 @@ extends Node3D
 ## A gentle exploration game on a complete spherical world.
 
 enum ItemKind { PHOTO, PART, FUEL }
-const ROVER_SPEED_MULTIPLIER := 1.25
+const ROVER_SPEED_MULTIPLIER := 1.20
 const SOLAR_SHELTER_TIME := 3.0
+const SHELTER_ENTRY_FADE := 0.18
+const HOP_SPEED := 2.4
+const HOP_GRAVITY := 4.5
 
 @export_group("Regras e sobrevivência")
 @export_range(1.0, 100.0, 0.5) var R: float = 32.0
@@ -18,13 +21,12 @@ const SOLAR_SHELTER_TIME := 3.0
 
 @export_group("Ciclos de eventos")
 @export_range(1.0, 600.0, 0.5) var SOLAR_INTERVAL: float = 100.0
-@export_range(1.0, 60.0, 0.5) var SOLAR_WARNING: float = 5.0
 @export_range(1.0, 60.0, 0.5) var SOLAR_DURATION: float = 12.0
 @export_range(1.0, 600.0, 0.5) var ENERGY_INTERVAL: float = 63.75
 @export_range(1.0, 600.0, 0.5) var SIGNAL_INTERVAL: float = 85.0
 
 @export_group("Movimentação")
-@export_range(0.1, 20.0, 0.01) var MOVE_SPEED: float = 5.8401
+@export_range(0.1, 20.0, 0.01) var MOVE_SPEED: float = 5.25609
 @export_range(2.0, 12.0, 0.1) var THIRD_PERSON_DISTANCE := 8.0
 @export_range(1.0, 10.0, 0.1) var THIRD_PERSON_HEIGHT := 6.6
 @export_range(35.0, 75.0, 1.0) var THIRD_PERSON_FOV := 44.0
@@ -84,6 +86,7 @@ var camp_normal := Vector3(0.07, 1, 0.12).normalized()
 var garden_normal := Vector3(0.9, -0.15, -0.5).normalized()
 var solar_clock := 0.0
 var solar_phase := "calm"
+var solar_warning_duration := 0.0
 var solar_remaining := 100.0
 var oxygen_label: Label
 var food_label: Label
@@ -138,7 +141,6 @@ var transition_veil: ColorRect
 var power_label: Label
 var base_status: Label
 var objectives_ui: HBoxContainer
-var vitals_ui: VBoxContainer
 var mute_ui: Button
 var portrait_hint: PanelContainer
 var hud_root: Control
@@ -204,9 +206,9 @@ func _ready() -> void:
 		camera.fov = THIRD_PERSON_FOV
 		_update_third_person_camera(false)
 	if "--capture-warning" in OS.get_cmdline_user_args():
-		solar_phase = "warning"
+		$SurvivalSystem.start_warning()
 		solar_clock = 2
-		solar_remaining = SOLAR_WARNING - solar_clock
+		solar_remaining = solar_warning_duration - solar_clock
 		feedback.shelter_tutorial()
 	if "--capture-settings" in OS.get_cmdline_user_args(): audio_settings.open()
 	if "--capture-briefing" in OS.get_cmdline_user_args(): _show_briefing()
@@ -344,7 +346,7 @@ func _process(delta: float) -> void:
 		outro_video._finish()
 		return
 	_update_controls()
-	if portrait_hint.visible or task_question.visible or photo_archive.is_open() or returning_to_menu: return
+	if portrait_hint.visible or minigames.visible or task_question.visible or photo_archive.is_open() or returning_to_menu: return
 	feedback.tick(delta)
 	if not playing or won or dead: return
 	elapsed += delta
@@ -388,6 +390,9 @@ func _build_helmet() -> void:
 
 func _rover_unlocked() -> bool:
 	return found[ItemKind.FUEL] >= GOALS[ItemKind.FUEL]
+
+func _rover_speed_bonus() -> int:
+	return roundi((ROVER_SPEED_MULTIPLIER - 1.0) * 100.0)
 
 func _move_speed() -> float:
 	return MOVE_SPEED * ROVER_SPEED_MULTIPLIER if _rover_unlocked() else MOVE_SPEED
@@ -465,7 +470,7 @@ func _update_distant_light() -> void:
 	var activity := 0.2
 	var brightness := 0.0
 	if solar_phase == "warning":
-		brightness = smoothstep(0.0, 1.0, solar_clock / SOLAR_WARNING)
+		brightness = smoothstep(0.0, 1.0, solar_clock / solar_warning_duration)
 		activity = 0.35 + brightness * 0.65
 	elif solar_phase == "active":
 		activity = 1.0
@@ -552,7 +557,6 @@ func _show_briefing() -> void:
 func _start_game() -> void:
 	start_menu.hide()
 	intro.hide()
-	hud_root.show()
 	playing = true
 	if not music.playing: music.play()
 	if not base_music.playing: base_music.play()
@@ -563,10 +567,12 @@ func _percent(value: float) -> float:
 	return clampf(value / MAX_RESERVE * 100.0, 0, 100)
 
 func _update_hud(_delta: float) -> void:
+	var kind := ItemKind.PART if found[ItemKind.PART] < GOALS[ItemKind.PART] else ItemKind.PHOTO if _rover_unlocked() else ItemKind.FUEL
 	for i in range(3):
+		var card := counts[i].get_parent().get_parent().get_parent() as Control
+		card.visible = i == kind and found[i] < GOALS[i]
 		counts[i].text = str(found[i]) + "/" + str(GOALS[i])
-		counts[i].get_parent().get_parent().get_parent().modulate.a = 1.0 if $ExplorationSystem.kind_available(i) else 0.45
-		counts[i].add_theme_color_override("font_color", MINT if found[i] == GOALS[i] else MUTED)
+		card.modulate.a = 1.0 if $ExplorationSystem.kind_available(i) else 0.65
 	oxygen_label.text = "O₂   " + str(ceili(_percent(oxygen))) + "%"
 	food_label.text = tr("COMIDA") + "   " + str(ceili(_percent(food))) + "%"
 	oxygen_bar.value = oxygen
@@ -624,7 +630,7 @@ func _update_camera_transform(desired: Vector3, target: Vector3, up: Vector3, sm
 func _update_survival_timer() -> void:
 	var lines: Array[String] = []
 	if playing and not dead and not won:
-		if solar_phase == "warning" and not inside:
+		if solar_phase == "warning":
 			lines.append(tr("NÉVOA SOLAR EM") + "   %.1f s" % maxf(0.0, solar_remaining))
 		if solar_phase == "active" and not inside:
 			lines.append(tr("RADIAÇÃO") + "   %.1f s" % maxf(0, EXPOSURE_LIMIT - exposure))
@@ -634,7 +640,7 @@ func _update_survival_timer() -> void:
 			lines.append("O₂   %.1f s" % (oxygen / OXYGEN_RATE + maxf(0, VITAL_GRACE - oxygen_empty_time)))
 		if food <= 0.0:
 			lines.append(tr("COMIDA") + "   %.1f s" % maxf(0, VITAL_GRACE - food_empty_time))
-	survival_timer.visible = not lines.is_empty()
+	survival_timer.visible = hud_root.visible and not lines.is_empty()
 	survival_timer_label.text = "\n".join(lines)
 	if GameOptions.language == "pt_BR": survival_timer_label.text = survival_timer_label.text.replace(".", ",")
 	survival_timer.reset_size()
@@ -680,33 +686,33 @@ func _build_expansion() -> void:
 	controls.interact_requested.connect(_interact)
 	controls.jump_requested.connect(_jump)
 	prompt = _button("", _interact)
-	prompt.custom_minimum_size = Vector2(450, 76)
+	prompt.custom_minimum_size.x = 450
 	hud.add_child(prompt)
 	prompt.hide()
-	power_label = _label("", 24, MINT)
-	power_label.position = Vector2(42, 265)
+	power_label = _label("", 17, MINT)
+	power_label.position.x = 22
 	hud_root.add_child(power_label)
-	base_status = _label("", 24, MINT)
-	base_status.position = Vector2(42, 302)
+	base_status = _label("", 17, PEACH)
+	base_status.position.x = 22
 	hud_root.add_child(base_status)
 	feedback = hud.get_node("MissionFeedback")
 	feedback.typing_tick.connect(func(): event_audio.play("typing"))
 	feedback.transmission_started.connect(func(): event_audio.play("radio"))
 	guide = hud.get_node("FirstSteps")
 	task_question = hud.get_node("TaskQuestion")
-	task_question.closed.connect(_update_controls)
 	mission_map = hud.get_node("MissionMap")
 	mission_map.configure(self)
 	photo_archive = preload("res://scripts/ui/mars_archive.gd").new()
 	photo_archive.name = "MarsArchive"
+	photo_archive.camera_icon = material_icons[ItemKind.PHOTO]
 	hud.add_child(photo_archive)
 	photo_archive.visibility_updated.connect(_update_controls)
+	photo_archive.image_accessed.connect(func(): event_audio.play("archive"))
 	audio_settings.menu_requested.connect(_return_to_menu)
 	hud.move_child(audio_settings, -1)
 	minigames = hud.get_node("BaseMinigames")
 	minigames.power_repaired.connect(_on_power_repaired)
 	minigames.signal_sent.connect(_on_signal_sent)
-	minigames.closed.connect(_update_controls)
 	survival_timer = PanelContainer.new()
 	survival_timer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	survival_timer.custom_minimum_size.x = 420
@@ -721,10 +727,10 @@ func _build_expansion() -> void:
 	intro_video.finished.connect(_show_briefing)
 	outro_video = hud.get_node("OutroVideo")
 	outro_video.finished.connect(_return_to_menu)
-	intro.configure(material_icons, controls.mobile)
+	intro.configure(material_icons, controls.mobile, _rover_speed_bonus())
 	GameOptions.language_changed.connect(func():
 		prompt_target = ""
-		intro.configure(material_icons, controls.mobile)
+		intro.configure(material_icons, controls.mobile, _rover_speed_bonus())
 	)
 	hud.move_child(task_question, -1)
 	portrait_hint = PanelContainer.new()
@@ -743,6 +749,8 @@ func _build_expansion() -> void:
 	transition_veil.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	transition_veil.modulate.a = 0
 	hud.add_child(transition_veil)
+	task_question.visibility_changed.connect(_update_controls)
+	minigames.visibility_changed.connect(_update_controls)
 	get_viewport().size_changed.connect(_layout_ui)
 	for modal in [death_panel]:
 		modal.resized.connect(_center_modal.bind(modal))
@@ -752,13 +760,24 @@ func _build_expansion() -> void:
 func _layout_ui() -> void:
 	var view := get_viewport().get_visible_rect().size
 	var ui_layout: Node = $HUD/HUDBuilder
-	objectives_ui.position = Vector2(view.x - ui_layout.objectives_right_margin, ui_layout.objectives_top_margin)
+	var large_screen: bool = not controls.mobile and view.x >= 1300.0
+	var hud_scale := 1.16 if large_screen else 1.0
+	var desktop_padding := 12.0 if large_screen else 0.0
+	ui_layout.layout_vitals(hud_scale)
+	objectives_ui.scale = Vector2.ONE * hud_scale
+	objectives_ui.position = Vector2(view.x - ui_layout.objectives_right_margin - desktop_padding - 152.0 * (hud_scale - 1.0), ui_layout.objectives_top_margin)
+	var archive_top: float = ui_layout.vitals_panel_position.y + ui_layout.vitals_panel_size.y * hud_scale + 12.0
+	photo_archive.launcher.position = Vector2(22, archive_top)
+	power_label.position.y = archive_top + photo_archive.launcher.size.y + 8.0
+	base_status.position.y = power_label.position.y + 24.0
 	controls._layout()
 	mission_map._layout()
 	_update_camera_fov()
-	mute_ui.position = Vector2(view.x - ui_layout.sound_button_right_margin, ui_layout.sound_button_top_margin)
-	mute_ui.custom_minimum_size = ui_layout.sound_button_size
-	prompt.position = Vector2((view.x - 450) / 2, view.y - ui_layout.prompt_bottom_margin)
+	mute_ui.position = Vector2(view.x - ui_layout.sound_button_right_margin - desktop_padding, ui_layout.sound_button_top_margin)
+	mute_ui.custom_minimum_size = ui_layout.sound_button_size + Vector2.ONE * desktop_padding
+	mute_ui.size = mute_ui.custom_minimum_size
+	mute_ui.add_theme_constant_override("icon_max_width", 30 if large_screen else 24)
+	prompt.position = Vector2((view.x - prompt.custom_minimum_size.x) / 2, view.y - ui_layout.prompt_bottom_margin)
 	for modal in [death_panel]: _center_modal(modal)
 	portrait_hint.visible = controls.mobile and view.y > view.x
 	_update_controls()
@@ -768,24 +787,29 @@ func _center_modal(modal: Control) -> void:
 
 func _update_controls() -> void:
 	if controls == null: return
-	minigames.frozen = portrait_hint.visible or audio_settings.visible
+	minigames.frozen = portrait_hint.visible or audio_settings.visible or task_question.visible
 	var archive_open: bool = photo_archive.is_open()
 	var active := playing and not returning_to_menu and not archive_open and not dead and not won and not transitioning and not minigames.visible and not portrait_hint.visible and not audio_settings.visible and not task_question.visible
 	controls.set_enabled(active)
+	hud_root.visible = active
 	photo_archive.visible = archive_open or active
 	controls.jump_available = not inside
 	_sync_resource_visibility()
 	if feedback.link_online != communications_online: feedback.set_link(communications_online)
-	feedback.active = playing and not dead and not won
+	feedback.active = active
+	feedback.visible = active
+	vignette.visible = active or dead
+	survival_timer.visible = active and not survival_timer_label.text.is_empty()
 	if not active:
+		guide.hide()
 		prompt.hide()
 		prompt_target = ""
-	base_status.visible = playing and not intro_video.active and not won and not dead
-	power_label.visible = base_status.visible
+	base_status.visible = not communications_online
+	power_label.visible = inside or energy_charge <= 30
 	power_label.text = tr("ENERGIA %d%%") % energy_charge if energy_ready else tr("ENERGIA OFF / O₂ OFF")
-	base_status.text = tr("RÁDIO ONLINE") if communications_online else tr("RÁDIO OFFLINE")
+	base_status.text = tr("RÁDIO OFFLINE")
 	if mission_map != null:
-		mission_map.visible = not archive_open and playing and not dead and not won and not inside and not intro_video.active and not minigames.visible and not audio_settings.visible and not task_question.visible and not portrait_hint.visible
+		mission_map.visible = active and not inside
 
 func _publish_web_test_state() -> void:
 	var forward := (-camera.global_basis.z).slide(normal).normalized()
@@ -807,7 +831,7 @@ func _publish_web_test_state() -> void:
 	JavaScriptBridge.eval("window.__astroQA = %s;" % JSON.stringify(state))
 
 func _jump() -> void:
-	if controls.enabled and not inside and hop == 0 and hop_velocity == 0: hop_velocity = 2.4
+	if controls.enabled and not inside and hop == 0 and hop_velocity == 0: hop_velocity = HOP_SPEED
 
 func _update_prompt() -> void:
 	if not controls.enabled: return
@@ -837,12 +861,15 @@ func _update_prompt() -> void:
 	if target == prompt_target: return
 	prompt_target = target
 	if prompt_tween: prompt_tween.kill()
+	if controls.mobile:
+		prompt.hide()
+		return
 	if target.is_empty():
 		prompt_tween = create_tween()
 		prompt_tween.tween_property(prompt, "modulate:a", 0.0, 0.12)
 		prompt_tween.tween_callback(prompt.hide)
 	else:
-		prompt.text = ("" if controls.mobile else "[E] ") + tr(text)
+		prompt.text = "[E] " + tr(text)
 		prompt.show()
 		prompt.pivot_offset = prompt.size / 2
 		prompt.scale = Vector2.ONE * 0.92
@@ -857,7 +884,7 @@ func _transition_to(to_inside: bool) -> void:
 	_update_controls()
 	transition_veil.mouse_filter = Control.MOUSE_FILTER_STOP
 	var fade := create_tween()
-	fade.tween_property(transition_veil, "modulate:a", 1.0, 0.18)
+	fade.tween_property(transition_veil, "modulate:a", 1.0, SHELTER_ENTRY_FADE)
 	await fade.finished
 	_apply_location(to_inside)
 	fade = create_tween()
@@ -922,8 +949,8 @@ func _update_indoor_movement(delta: float) -> void:
 
 func _update_solar_notices() -> void:
 	if not communications_online: return
-	if solar_phase == "warning" and solar_clock >= SOLAR_WARNING - 5:
-		var seconds := ceili(SOLAR_WARNING - solar_clock)
+	if solar_phase == "warning" and not inside:
+		var seconds := ceili(solar_remaining)
 		feedback.transmit("solar_warning_%d" % solar_cycle, tr("Radiação em %d s. Entre no abrigo.") % seconds, true, feedback.AXIOS, true, true)
 
 func _update_energy(delta: float) -> void:
@@ -939,9 +966,7 @@ func _on_signal_sent() -> void:
 
 func _ask_task(task: String) -> bool:
 	if not playing or dead or won or capture or "--smoke-test" in OS.get_cmdline_user_args(): return false
-	if not task_question.open_task(task): return false
-	_update_controls()
-	return true
+	return task_question.open_task(task)
 
 func _assert_world() -> void:
 	assert(items.size() == TOTAL)
@@ -967,7 +992,7 @@ func _assert_world() -> void:
 	var crossed_hemisphere := false
 	pad = Vector2(0, 1)
 	for i in range(1800):
-		if i % 55 == 0 and hop == 0: hop_velocity = 2.4
+		if i % 55 == 0 and hop == 0: hop_velocity = HOP_SPEED
 		_update_movement(0.02)
 		assert(avatar.position.length() >= R + terrain.height_at(normal) - 0.02)
 		if normal.y < -0.5:
@@ -1002,8 +1027,8 @@ func _assert_survival() -> void:
 	solar_clock = SOLAR_INTERVAL - 0.1
 	solar_phase = "calm"
 	_update_radiation(0.2)
-	assert(solar_phase == "warning" and is_equal_approx(solar_remaining, SOLAR_WARNING - 0.1))
-	solar_clock = SOLAR_WARNING - 0.1
+	assert(solar_phase == "warning" and is_equal_approx(solar_remaining, solar_warning_duration - 0.1))
+	solar_clock = solar_warning_duration - 0.1
 	_update_radiation(0.2)
 	assert(solar_phase == "active" and fog_audio.playing)
 	for point in [Vector3.UP, Vector3.DOWN, camp_normal]:

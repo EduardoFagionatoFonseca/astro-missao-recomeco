@@ -18,8 +18,6 @@ func advance(delta: float) -> void:
 			game.energy_failures += 1
 			game.event_audio.play("energy")
 			game.feedback.transmit("power_tutorial", "Energia baixa. Produção de O₂ interrompida.", true, game.feedback.AXIOS)
-			if game.minigames.visible and game.minigames.mode == "signal":
-				game.minigames.open_signal(false, game.found[1], game.signal_transmitted, game.signal_failures)
 	if game.communications_online and game.ship == null:
 		game.signal_clock += delta * game._pressure()
 		if game.signal_clock >= game.SIGNAL_INTERVAL:

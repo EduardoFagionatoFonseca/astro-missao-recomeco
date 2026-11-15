@@ -19,11 +19,11 @@ func refresh() -> void:
 
 func _layout() -> void:
 	var view := get_viewport_rect().size
-	var side := 360.0 if expanded else 226.0
+	var side := 360.0 if expanded else 174.0
 	position = Vector2(view.x - side - 22, view.y - side - 22)
 	if game != null and game.controls.mobile:
 		var jump: Rect2 = game.controls.jump_rect
-		side = minf(200.0, jump.position.y - 260.0)
+		side = minf(160.0, jump.position.y - 260.0)
 		if side >= 128.0:
 			position = Vector2(view.x - side - 22, jump.position.y - side - 16.0)
 		else:

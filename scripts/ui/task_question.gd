@@ -3,9 +3,12 @@ extends Control
 signal closed
 
 const QUESTIONS_PATH := "res://data/task_questions.json"
+const ROVER_TASK := "rover_photo"
+const NASA_PHOTO_ID := "PIA25172"
+const NASA_SEARCH := "https://images-api.nasa.gov/search?nasa_id=" + NASA_PHOTO_ID
 
 var questions: Dictionary = {}
-var completed: Dictionary = {}
+var shown: Dictionary = {}
 var current_task := ""
 var content: VBoxContainer
 var topic: Label
@@ -53,6 +56,36 @@ func _ready() -> void:
 	GameOptions.language_changed.connect(_render)
 	_layout()
 	hide()
+	if not _is_smoke_test() and questions.has(ROVER_TASK):
+		_fetch_rover_photo()
+
+func _fetch_rover_photo() -> void:
+	var request := HTTPRequest.new()
+	request.timeout = 5.0
+	request.body_size_limit = 65536
+	add_child(request)
+	request.request_completed.connect(func(result: int, status: int, _headers: PackedStringArray, body: PackedByteArray):
+		if result == HTTPRequest.RESULT_SUCCESS and status == 200:
+			_apply_rover_photo_metadata(JSON.parse_string(body.get_string_from_utf8()))
+		request.queue_free()
+	)
+	if request.request(NASA_SEARCH) != OK: request.queue_free()
+
+func _apply_rover_photo_metadata(payload: Variant) -> void:
+	if shown.has(ROVER_TASK): return
+	if not payload is Dictionary or not payload.get("collection") is Dictionary: return
+	var items: Variant = payload.collection.get("items")
+	if not items is Array or items.is_empty() or not items[0] is Dictionary: return
+	var data: Variant = items[0].get("data")
+	if not data is Array or data.is_empty() or not data[0] is Dictionary: return
+	if data[0].get("nasa_id") != NASA_PHOTO_ID: return
+	var title: String = str(data[0].get("title", ""))
+	var entry: Dictionary = questions[ROVER_TASK]
+	# The published title starts with the name of the rover credited for this panorama.
+	var correct: int = entry.en.answers.find(title.get_slice(" ", 0))
+	if correct < 0: return
+	entry["correct"] = correct
+	entry["source_title"] = title
 
 func _label(font_size: int) -> Label:
 	var label := Label.new()
@@ -65,12 +98,16 @@ func _layout() -> void:
 	content.custom_minimum_size.x = minf(740, maxf(240, get_viewport_rect().size.x - 110))
 
 func open_task(task: String) -> bool:
-	if visible or completed.has(task) or not questions.has(task): return false
+	if visible or shown.has(task) or not questions.has(task): return false
+	shown[task] = true
 	current_task = task
 	answered = false
 	show()
 	_render()
 	return true
+
+func _is_smoke_test() -> bool:
+	return "--smoke-test" in OS.get_cmdline_user_args()
 
 func _render() -> void:
 	if current_task.is_empty(): return
@@ -91,10 +128,12 @@ func _render() -> void:
 		answers.add_child(button)
 	answers.visible = not answered
 	explanation.text = localized.explanation
+	if current_task == ROVER_TASK: explanation.text = localized.explanation % localized.answers[int(entry.correct)]
 	explanation.visible = answered
-	source.text = entry.source
-	source.uri = entry.url
-	source.visible = answered
+	source.text = entry.get("source", "")
+	source.uri = entry.get("url", "")
+	source.tooltip_text = entry.get("source_title", "")
+	source.visible = answered and not source.uri.is_empty()
 	proceed.text = tr("Continuar missão") if answered else tr("Pular pergunta")
 	proceed.visible = answered or current_task == "radiation"
 	if answered: proceed.grab_focus()
@@ -111,7 +150,6 @@ func _answer(index: int) -> void:
 
 func _close() -> void:
 	if not answered and current_task != "radiation": return
-	completed[current_task] = true
 	current_task = ""
 	hide()
 	closed.emit()

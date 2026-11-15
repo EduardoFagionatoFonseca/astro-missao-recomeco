@@ -21,6 +21,24 @@ func _init() -> void:
 func _distance(n: Vector3, center: Vector3) -> float:
 	return acos(clampf(n.dot(center), -1, 1)) * R
 
+func route_tangent(from: Vector3, to: Vector3, fallback: Vector3) -> Vector3:
+	var tangent := to.slide(from)
+	return fallback if tangent.is_zero_approx() else tangent.normalized()
+
+func count_route_obstacles(from: Vector3, tangent: Vector3, distance: float) -> int:
+	var end_angle := distance / R
+	var end := from * cos(end_angle) + tangent * sin(end_angle)
+	var count := 0
+	# Allow time for a hop or a detour around each ledge or crater rim on the route.
+	for obstacle in platforms + craters:
+		var center: Vector3 = obstacle.normal
+		var closest := atan2(center.dot(tangent), center.dot(from))
+		var best_dot := maxf(center.dot(from), center.dot(end))
+		if closest > 0.0 and closest < end_angle:
+			best_dot = center.dot(from * cos(closest) + tangent * sin(closest))
+		if best_dot >= cos((obstacle.radius + 0.1) / R): count += 1
+	return count
+
 func height_at(n: Vector3, include_platforms := true) -> float:
 	var height := 0.0
 	for crater in craters:

@@ -99,6 +99,31 @@
     "source": "NASA · Veggie",
     "url": "https://www.nasa.gov/exploration-research-and-technology/growing-plants-in-space/"
   },
+  "rover_photo": {
+    "pt_BR": {
+      "topic": "Rover",
+      "question": "Qual rover da NASA fotografou a região de Santa Cruz em Marte em fevereiro de 2022?",
+      "answers": [
+        "Curiosity",
+        "Perseverance",
+        "Opportunity"
+      ],
+      "explanation": "O rover %s fotografou a região de Santa Cruz. A NASA reuniu 24 imagens para montar o panorama."
+    },
+    "en": {
+      "topic": "Rover",
+      "question": "Which NASA rover photographed the Santa Cruz area on Mars in February 2022?",
+      "answers": [
+        "Curiosity",
+        "Perseverance",
+        "Opportunity"
+      ],
+      "explanation": "The %s rover photographed the Santa Cruz area. NASA stitched together 24 images to make the panorama."
+    },
+    "correct": 1,
+    "source": "NASA · PIA25172",
+    "url": "https://science.nasa.gov/resource/perseverance-looks-toward-santa-cruz/"
+  },
   "radiation": {
     "pt_BR": {
       "topic": "Abrigo solar",

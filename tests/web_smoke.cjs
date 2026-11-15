@@ -13,7 +13,7 @@ const {chromium, devices} = require(process.env.PLAYWRIGHT_MODULE || 'playwright
       const errors = [];
       page.on('pageerror', error => errors.push(String(error)));
       page.on('console', msg => {if (msg.type()==='error') errors.push(msg.text());});
-      await page.goto('http://127.0.0.1:8060', {waitUntil:'networkidle'});
+      await page.goto('http://127.0.0.1:8060/?qa=1', {waitUntil:'networkidle'});
       await page.locator('#status').waitFor({state:'hidden',timeout:60000});
       await page.waitForTimeout(2200);
       await page.screenshot({path:`docs/web-${mobile?'mobile':'desktop'}-menu.png`});
@@ -56,7 +56,10 @@ const {chromium, devices} = require(process.env.PLAYWRIGHT_MODULE || 'playwright
       await click(900,765);
       await page.waitForTimeout(700);
       await page.screenshot({path:`docs/web-${mobile?'mobile':'desktop'}-world.png`});
-      if (mobile) await click(720,825); else await page.keyboard.press('e');
+      if (mobile) {
+        const [x,y,width,height] = await page.evaluate(()=>window.__astroQA.action_rect);
+        await click(x+width/2,y+height/2);
+      } else await page.keyboard.press('e');
       await page.waitForTimeout(700);
       await page.screenshot({path:`docs/web-${mobile?'mobile':'desktop'}-base.png`});
       if (!mobile) {

@@ -10,6 +10,7 @@ var next_button: Button
 var back_button: Button
 var page_index := 0
 var item_icons: Array[Texture2D] = []
+var rover_speed_bonus := 0
 var page_tween: Tween
 
 func _ready() -> void:
@@ -63,7 +64,8 @@ func _step(title: String, text: String) -> void:
 	_text(column, title, 30)
 	_text(column, text, 28, Color("adb4b8"))
 
-func configure(icons: Array[Texture2D], mobile: bool) -> void:
+func configure(icons: Array[Texture2D], mobile: bool, speed_bonus: int) -> void:
+	rover_speed_bonus = speed_bonus
 	item_icons = icons
 	controls_label.text = "Joystick mover   /   Saltar: subir plataformas   /   Toque usar" if mobile else "WASD mover   /   Espaço: subir plataformas   /   E usar"
 	_render()
@@ -104,7 +106,7 @@ func _render() -> void:
 			row.add_child(icon)
 			_text(row, ["8 fotos", "6 peças", "8 combustíveis"][i], 28)
 		_step("DEPOIS, O RESGATE", "O sinal revela o combustível. Colete os 8 para ativar o rover.")
-		_text(body, "Com o rover (+25% de velocidade), reúna as 8 fotos para pedir resgate.", 24, Color("adb4b8"))
+		_text(body, tr("Com o rover (+%d%% de velocidade), reúna as 8 fotos para pedir resgate.") % rover_speed_bonus, 24, Color("adb4b8"))
 	else:
 		_step("ENERGIA E RESERVAS", "Energia gera O₂. Estufa repõe comida. Repare aos 30%.")
 		_step("MANTENHA O SINAL", "Sem sinal, o combustível e os pontos de foto ficam ocultos.")

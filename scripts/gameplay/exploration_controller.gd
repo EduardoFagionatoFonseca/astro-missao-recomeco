@@ -28,7 +28,7 @@ func update_movement(delta: float) -> void:
 		game._align(game.avatar, game.normal, -game.avatar.basis.z)
 	var ground: float = game.terrain.height_at(game.normal)
 	if game.altitude > ground + 0.001 or game.hop_velocity > 0:
-		game.hop_velocity -= 4.5 * delta
+		game.hop_velocity -= game.HOP_GRAVITY * delta
 		game.altitude += game.hop_velocity * delta
 		if game.altitude <= ground and game.hop_velocity <= 0:
 			game.altitude = ground
@@ -101,7 +101,8 @@ func collect(index: int) -> void:
 		game.rover.reparent(game)
 		update_rover(0.0, true)
 		sync_resource_visibility()
-		game.feedback.notice_message("rover_unlocked", "Rover ativo. Velocidade +25%. Pontos de foto liberados!", false)
+		game.feedback.notice_message("rover_unlocked", tr("Rover ativo. Velocidade +%d%%. Pontos de foto liberados!") % game._rover_speed_bonus(), false)
+		game._ask_task(game.task_question.ROVER_TASK)
 	try_rescue()
 
 func try_rescue() -> void:
