@@ -30,8 +30,7 @@ func run(game: Node3D) -> void:
 	game.communications_online = false
 	feedback.transmit("offline_test", "Oculto")
 	assert(feedback.queue.is_empty() and not feedback.seen.has("offline_test"))
-	game.solar_phase = "warning"
-	game.solar_clock = game.SOLAR_WARNING - 5
+	game.get_node("SurvivalSystem").start_warning()
 	var forecast := "solar_warning_%d" % game.solar_cycle
 	feedback.seen.erase(forecast)
 	game._update_solar_notices()

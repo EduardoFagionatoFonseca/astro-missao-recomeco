@@ -11,10 +11,12 @@ func run(game: Node3D) -> void:
 	game._apply_location(true)
 	game._update_music(2)
 	assert(is_equal_approx(db_to_linear(game.base_music.volume_db), 0.24))
-	# Shelter during the warning starts the storm immediately and caps the wait.
-	game.solar_phase = "warning"
-	game.solar_clock = 0
+	# The storm starts at the advertised time, even when already sheltered.
+	game.get_node("SurvivalSystem").start_warning()
 	game._apply_location(true)
+	assert(game.solar_phase == "warning" and not game.fog_audio.playing)
+	var warning: float = game.solar_remaining
+	game._update_radiation(warning)
 	assert(game.solar_phase == "active" and game.alert_audio.playing and game.fog_audio.playing)
 	assert(game.fog_audio.stream.loop_mode == AudioStreamWAV.LOOP_FORWARD)
 	assert(is_equal_approx(game.solar_remaining, game.SOLAR_SHELTER_TIME))
@@ -30,6 +32,7 @@ func run(game: Node3D) -> void:
 	assert(game.task_question.open_task("radiation") and game.task_question.proceed.visible)
 	game.task_question._close()
 	assert(not game.task_question.visible)
+	assert(not game.task_question.open_task("radiation"))
 	game._apply_location(false)
 	game.solar_clock = 0
 	game.exposure = 0

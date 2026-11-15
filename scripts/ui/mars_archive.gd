@@ -1,7 +1,10 @@
 extends Control
 signal visibility_updated
+signal image_accessed
 
 const UI := preload("res://scripts/ui/ui_theme.gd")
+const PANEL_SIZE := Vector2(1120, 535)
+const DETAILS_WIDTH := 700.0
 const PHOTOS := [
 	preload("res://assets/mars/PIA19400.jpg"),
 	preload("res://assets/mars/PIA23202.jpg"),
@@ -12,7 +15,7 @@ const PHOTOS := [
 	preload("res://assets/mars/PIA25829.jpg"),
 	preload("res://assets/mars/PIA21498.jpg"),
 ]
-const ICON := preload("res://assets/ui/mars_archive.svg")
+var camera_icon: Texture2D
 
 var catalog: Array
 var unlocked: Array[int] = []
@@ -38,18 +41,19 @@ func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	catalog = JSON.parse_string(FileAccess.get_file_as_string("res://assets/mars/provenance.json"))
 	launcher = Button.new()
-	launcher.custom_minimum_size = Vector2(224, 60)
-	launcher.icon = ICON
+	launcher.custom_minimum_size = Vector2(224, 66)
+	launcher.icon = camera_icon
 	launcher.expand_icon = true
-	launcher.add_theme_constant_override("icon_max_width", 32)
-	launcher.add_theme_font_size_override("font_size", 23)
+	launcher.add_theme_constant_override("icon_max_width", 42)
+	launcher.add_theme_font_size_override("font_size", 22)
+	launcher.icon_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	launcher.pressed.connect(open)
 	add_child(launcher)
-	badge = _label(launcher, "", 18, Color("171c23"))
+	badge = _label(launcher, "", 14, Color("171c23"))
 	badge.add_theme_stylebox_override("normal", UI.box(Color("f2ba90"), Color("f2ba90"), 4))
 	badge.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	badge.position = Vector2(194, -13)
-	badge.custom_minimum_size = Vector2(36, 30)
+	badge.position = Vector2(launcher.custom_minimum_size.x - 24, -7)
+	badge.custom_minimum_size = Vector2(24, 21)
 	badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	overlay = ColorRect.new()
 	overlay.color = Color("080d14e8")
@@ -81,7 +85,7 @@ func _ready() -> void:
 	content.add_child(grid)
 	for i in range(PHOTOS.size()):
 		var button := Button.new()
-		button.custom_minimum_size = Vector2(130, 100)
+		button.custom_minimum_size = Vector2(130, 82)
 		button.expand_icon = true
 		button.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		button.pressed.connect(_select.bind(i))
@@ -98,8 +102,12 @@ func _ready() -> void:
 	detail.custom_minimum_size.y = 210
 	info.add_child(detail)
 	caption = _label(info, "", 25, Color("f0e9d9"))
+	caption.custom_minimum_size.x = DETAILS_WIDTH
+	caption.size.x = DETAILS_WIDTH
 	caption.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	credit = _label(info, "", 18, Color("a3b7c4"))
+	credit.custom_minimum_size.x = DETAILS_WIDTH
+	credit.size.x = DETAILS_WIDTH
 	credit.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	source = Button.new()
 	source.text = "Fonte NASA ↗"
@@ -109,6 +117,8 @@ func _ready() -> void:
 	overlay.hide()
 	GameOptions.language_changed.connect(_refresh)
 	get_viewport().size_changed.connect(_layout)
+	panel.resized.connect(_layout)
+	panel.size = PANEL_SIZE
 	_layout()
 	_refresh()
 	hide()
@@ -123,8 +133,6 @@ func _label(parent: Control, value: String, font_size: int, color: Color) -> Lab
 
 func _layout() -> void:
 	var view := get_viewport_rect().size
-	launcher.position = Vector2(22, 358)
-	panel.size = Vector2(1120, 650)
 	panel.scale = Vector2.ONE * minf(1.0, minf((view.x - 36) / panel.size.x, (view.y - 36) / panel.size.y))
 	panel.position = (view - panel.size * panel.scale) * 0.5
 
@@ -134,19 +142,22 @@ func is_open() -> bool:
 func open() -> void:
 	if not is_visible_in_tree() or overlay.visible: return
 	overlay.show()
-	if selected < 0 and not unlocked.is_empty(): _select(unlocked[-1])
-	_refresh()
+	launcher.hide()
+	if not unlocked.is_empty(): _select(unlocked[-1] if selected < 0 else selected)
 	visibility_updated.emit()
 
 func close() -> void:
 	if not overlay.visible: return
 	overlay.hide()
+	launcher.show()
 	visibility_updated.emit()
 
 func _select(index: int) -> void:
+	if not index in unlocked: return
 	selected = index
 	unseen.erase(index)
 	_refresh()
+	image_accessed.emit()
 
 func _refresh() -> void:
 	var english := GameOptions.language == "en"

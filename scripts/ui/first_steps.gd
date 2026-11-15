@@ -15,7 +15,7 @@ func _ready() -> void:
 	hint = Label.new()
 	hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	hint.add_theme_font_size_override("font_size", 28)
+	hint.add_theme_font_size_override("font_size", 24)
 	hint.add_theme_color_override("font_color", Color("f2e2c8"))
 	hint.add_theme_color_override("font_outline_color", Color("101c30"))
 	hint.add_theme_constant_override("outline_size", 6)
@@ -88,7 +88,7 @@ func update_guide(state: Node3D, _delta: float) -> void:
 	_build_route()
 	hint.text = tr(caption)
 	hint.size = Vector2(minf(660, size.x - 80), 48)
-	hint.position = Vector2((size.x - hint.size.x) / 2, size.y - 440)
+	hint.position = Vector2((size.x - hint.size.x) / 2, 28)
 	show()
 	queue_redraw()
 
@@ -110,8 +110,7 @@ func _build_route() -> void:
 		if game.normal.angle_to(target) < 0.01: return
 		# Follow the ground and stop at the horizon, never through the planet.
 		var angle: float = game.normal.angle_to(target)
-		var tangent: Vector3 = target.slide(game.normal).normalized()
-		if tangent.is_zero_approx(): tangent = game.north
+		var tangent: Vector3 = game.terrain.route_tangent(game.normal, target, game.north)
 		var steps := maxi(2, ceili(angle * game.R / 0.40))
 		for i in range(1, steps + 1):
 			var along := angle * float(i) / steps

@@ -91,7 +91,9 @@ const distance=(a,b)=>Math.acos(Math.max(-1,Math.min(1,dot(a,b))))*12;
    if(distance(state.normal,state.camp)<1.5)break;
    await steer(state.camp);await page.waitForTimeout(90);
   }
-  await release();await click(720,825);await page.waitForTimeout(700);
+  await release();
+  const [actionX,actionY,actionWidth,actionHeight]=await page.evaluate(()=>window.__astroQA.action_rect);
+  await click(actionX+actionWidth/2,actionY+actionHeight/2);await page.waitForTimeout(700);
   state=await page.evaluate(()=>window.__astroQA);assert(state.inside,'Touch action enters the shelter.');
   assert(await level()>0.0001,'Base MP3 must produce real output.');
   const before=state.position;await move(1,0);await page.waitForTimeout(350);await release();

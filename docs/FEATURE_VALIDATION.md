@@ -37,7 +37,7 @@ Fluxo de missão: `tests/mission_flow.gd` verifica fechamento automático da ant
 
 Contagens regressivas: `tests/countdowns_audio.gd` cobre resistência solar de 5 s, três contagens simultâneas, tempo da reserva mais tolerância final de O₂/comida, limpeza após abrigo/reabastecimento e escala musical 100%=0,8 / 50%=0,4. O smoke test verifica a derrota após 5 s de exposição contínua. Capturas `solar-preview.png`, `critical-preview.png` e `settings-preview.png` mostram os timers e o novo padrão de volume.
 
-Ajuste de sobrevivência contínua: `tests/survival_tuning.gd` cobre menu sem painel/frase, botão de início quente, ganhos musicais reduzidos, Sol maior a 180 unidades/lua menor, explosão e loop solar audíveis nos dois ambientes até o fim do evento, avisos de O₂/comida sem rádio e ausência de pausa por Esc. Os testes de minigame/configurações agora exigem que comida e temporizadores continuem avançando. O guia anterior ao início permanece congelado. `critical-preview.png` mostra o aviso local combinado de recursos.
+Ajuste de sobrevivência: `tests/survival_tuning.gd` cobre os ganhos musicais, os sons da tempestade, os avisos sem rádio e as configurações com sobrevivência ativa. `tests/features.gd` verifica a pausa de recursos e eventos durante os minigames e o retorno do HUD ao sair. `tests/radio_resources.gd` verifica a pergunta do rover e a pausa durante o questionário.
 
 Correção de áudio e salto: `tests/terrain_mobile.gd` verifica bloqueio lateral das plataformas, salto com joystick e segundo dedo, pouso, queda ao sair da borda, alcance vertical de coleta, profundidade das crateras, oito direções com velocidade normalizada e cancelamento ao perder foco. Malha e movimentação consultam o mesmo campo de altura em `scripts/world/planet_terrain.gd`.
 

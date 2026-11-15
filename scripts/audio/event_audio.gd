@@ -1,7 +1,7 @@
 extends Node
 ## Original event sounds. Separate channels keep life support distinct from solar weather.
 const RATE := 22050
-const LEVELS := {"forecast": -11.0, "solar": -13.0, "fog": -17.0, "vitals": -8.0, "energy": -12.0, "disconnect": -11.0, "radio": -19.0, "typing": -25.0, "collect": -8.0, "photo": -10.0, "death": -9.0}
+const LEVELS := {"forecast": -11.0, "solar": -13.0, "fog": -17.0, "vitals": -8.0, "energy": -12.0, "disconnect": -11.0, "radio": -19.0, "typing": -25.0, "collect": -8.0, "photo": -7.0, "archive": -14.0, "death": -9.0}
 var players: Dictionary = {}
 var muted := false
 
@@ -9,7 +9,7 @@ func _ready() -> void:
 	for kind: String in LEVELS:
 		var player := AudioStreamPlayer.new()
 		player.playback_type = AudioServer.PLAYBACK_TYPE_STREAM
-		player.bus = "Interactions" if kind in ["collect", "photo", "typing"] else "Alerts"
+		player.bus = "Interactions" if kind in ["collect", "photo", "archive", "typing"] else "Alerts"
 		player.stream = _synthesize(kind)
 		player.volume_db = LEVELS[kind]
 		add_child(player)
@@ -31,7 +31,7 @@ func set_paused(value: bool) -> void:
 	for player: AudioStreamPlayer in players.values(): player.stream_paused = value
 
 func _synthesize(kind: String) -> AudioStreamWAV:
-	var seconds: float = {"forecast": 0.82, "solar": 3.6, "fog": 2.4, "vitals": 0.7, "energy": 0.9, "disconnect": 0.85, "radio": 0.24, "typing": 0.035, "collect": 0.48, "photo": 0.18, "death": 1.5}[kind]
+	var seconds: float = {"forecast": 0.82, "solar": 3.6, "fog": 2.4, "vitals": 0.7, "energy": 0.9, "disconnect": 0.85, "radio": 0.24, "typing": 0.035, "collect": 0.48, "photo": 0.18, "archive": 0.22, "death": 1.5}[kind]
 	var data := PackedByteArray()
 	data.resize(int(RATE * seconds) * 2)
 	var random := RandomNumberGenerator.new()
@@ -85,9 +85,14 @@ func _synthesize(kind: String) -> AudioStreamWAV:
 					var envelope := (1 - exp(-age * 700)) * exp(-age * 12)
 					sample += (sin(TAU * frequency * age) * 0.25 + sin(TAU * frequency * 2 * age) * 0.035) * envelope
 			"photo":
-				var first_click := exp(-t * 140.0)
-				var second_click := exp(-(t - 0.055) * 200.0) if t >= 0.055 else 0.0
-				sample = (noise - low + sin(TAU * 840.0 * t) * 0.2) * (first_click * 0.7 + second_click * 0.45)
+				var first_click := (1.0 - exp(-t * 1800.0)) * exp(-t * 95.0)
+				var age := maxf(0.0, t - 0.062)
+				var second_click := (1.0 - exp(-age * 1800.0)) * exp(-age * 155.0)
+				sample = (noise - low) * (0.8 * first_click + 0.5 * second_click)
+				sample += sin(TAU * 340.0 * t) * first_click * 0.45
+			"archive":
+				var envelope := minf(1.0, t * 160.0) * exp(-t * 17.0)
+				sample = (sin(TAU * 660.0 * t) + sin(TAU * 990.0 * t) * 0.25) * envelope * 0.36
 			"death":
 				var envelope := (1 - exp(-t * 60)) * exp(-t * 2.7)
 				var frequency := 210.0 * t - 48.0 * t * t

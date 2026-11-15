@@ -91,10 +91,10 @@ func _input(event: InputEvent) -> void:
 			if stick_id == -1 and event.position.distance_to(stick_center) < stick_radius * 1.5:
 				stick_id = event.index
 				_update_stick(event.position)
-			elif action_rect.has_point(event.position):
-				if action_available: interact_requested.emit()
-			elif jump_rect.has_point(event.position):
-				if jump_available: jump_requested.emit()
+			elif action_available and action_rect.has_point(event.position):
+				interact_requested.emit()
+			elif jump_available and jump_rect.has_point(event.position):
+				jump_requested.emit()
 			else: return
 		else:
 			if event.index == stick_id:
@@ -118,8 +118,8 @@ func _draw() -> void:
 	draw_circle(stick_center, stick_radius, Color("10151caa"))
 	draw_arc(stick_center, stick_radius, 0, TAU, 64, Color("b7d8bfbb"), 2.5 * control_scale, true)
 	draw_circle(stick_center + Vector2(movement.x, -movement.y) * stick_radius * 0.62, 31.0 * control_scale, Color("d4e5d7dd"))
-	_draw_button(action_rect, action_text, Color("f2ba90ef") if action_available else Color("a3b7c477"))
-	_draw_button(jump_rect, "Saltar", Color("b7d8bfdd") if jump_available else Color("a3b7c455"))
+	if action_available: _draw_button(action_rect, action_text, Color("f2ba90ef"))
+	if jump_available: _draw_button(jump_rect, "Saltar", Color("b7d8bfdd"))
 
 func _draw_button(rect: Rect2, text: String, color: Color) -> void:
 	text = tr(text)

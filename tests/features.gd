@@ -33,10 +33,11 @@ func run(game: Node3D) -> void:
 	assert(room.station_at(room.position + Vector3(2.3, 0, -1.6)) == "signal")
 	var puzzle: Control = game.minigames
 	puzzle.open_power(false)
-	var previous_food: float = game.food
-	var previous_solar: float = game.solar_clock
+	assert(puzzle.visible and not game.hud_root.visible and not game.feedback.visible)
+	assert(not game.guide.visible and not game.survival_timer.visible and not game.controls.enabled)
+	var resources := [game.food, game.oxygen, game.energy_clock, game.solar_clock, game.signal_clock]
 	game._process(10)
-	assert(game.food < previous_food and game.solar_clock > previous_solar)
+	assert(resources == [game.food, game.oxygen, game.energy_clock, game.solar_clock, game.signal_clock])
 	puzzle._select_source(0)
 	puzzle._select_target(1)
 	assert(puzzle.connected.count(true) == 0)
@@ -50,6 +51,9 @@ func run(game: Node3D) -> void:
 	assert(puzzle.completed and not game.signal_transmitted)
 	game.found[1] = 6
 	puzzle.open_signal(true, 6, false)
+	assert(puzzle.visible and not game.hud_root.visible)
+	game._process(10)
+	assert(game.food == resources[0] and game.oxygen == resources[1])
 	puzzle.frequency.value = 64
 	puzzle.alignment.value = 38
 	puzzle._process(1.5)
@@ -65,6 +69,7 @@ func run(game: Node3D) -> void:
 	puzzle._process(3.1)
 	assert(game.signal_transmitted and game.ship == null)
 	puzzle.close()
+	assert(game.hud_root.visible and game.controls.enabled)
 	game._apply_location(false)
 	assert(not game.inside and game.normal.is_equal_approx(saved))
 	# A location transition cannot resurrect previously collected world objects.
@@ -84,4 +89,4 @@ func run(game: Node3D) -> void:
 	load("res://tests/axios_ui.gd").new().run(game)
 	game._update_controls()
 	assert(ResourceLoader.exists("res://assets/cinematics/intro.ogv"))
-	print("PASS: multi-touch, input cancellation, interior bounds/furniture, stations, cables, signal stability, survival during puzzles, power depletion, return position and video asset")
+	print("PASS: multi-touch, interior bounds, stations, cables, signal stability, survival pause and isolated HUD during tasks, power depletion, return position and video asset")

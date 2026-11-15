@@ -1,7 +1,7 @@
 extends RefCounted
 
 func run(game: Node3D) -> void:
-	assert(is_equal_approx(game.MOVE_SPEED, 3.8934 * 1.5))
+	assert(is_equal_approx(game.MOVE_SPEED, 3.8934 * 1.5 * 0.9))
 	assert(game.R == 32 and game.terrain.R == game.R)
 	assert(game.astronaut.has_node("Helmet") and game.mission_map.game == game)
 	assert(not InputMap.has_action("run"))
