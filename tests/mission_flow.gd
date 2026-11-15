@@ -36,17 +36,14 @@ func run(game: Node3D) -> void:
 	game.solar_clock = game.SOLAR_INTERVAL - 0.1
 	game._update_solar_notices()
 	assert(not game.feedback.seen.has(forecast))
-	game.solar_phase = "warning"
-	game.solar_clock = game.SOLAR_WARNING - 5.1
-	game._update_solar_notices()
-	assert(not game.feedback.seen.has(forecast))
+	game._update_radiation(0.11)
+	assert(game.solar_phase == "warning" and game.event_audio.players.forecast.playing)
 	game.feedback.current_time = 3
-	game.solar_clock = game.SOLAR_WARNING - 5
 	game._update_solar_notices()
 	assert(game.feedback.seen.has(forecast) and game.feedback.current_time == 0)
 	game.feedback.active = true
 	game.feedback.tick(0.02)
-	assert(game.feedback.dialogue.text.contains("5 s") and game.feedback.speaker.text == game.feedback.AXIOS)
+	assert(game.feedback.dialogue.text.contains("Névoa solar") and game.feedback.speaker.text == game.feedback.AXIOS)
 	game._update_solar_notices()
 	assert(game.feedback.current_time > 0) # Does not keep interrupting itself.
 	game.feedback.seen.erase(forecast)
@@ -54,6 +51,8 @@ func run(game: Node3D) -> void:
 	game.feedback.set_link(false)
 	game._update_solar_notices()
 	assert(not game.feedback.seen.has(forecast))
+	game._update_hud(0)
+	assert(game.survival_timer.visible and game.survival_timer_label.text == "NÉVOA SOLAR EM   16,0 s")
 	game.communications_online = true
 	game.feedback.set_link(true)
 	game.solar_phase = "active"
@@ -72,4 +71,4 @@ func run(game: Node3D) -> void:
 	game.solar_clock = 0
 	game._apply_location(false)
 	game._update_controls()
-	print("PASS: antenna auto-close/lock/re-enable, radio warning only 5 seconds before fog with preemption/offline gating, growing exposure effect cleared by shelter")
+	print("PASS: antenna auto-close/lock/re-enable, local and radio warnings from onset, exposure cleared by shelter")

@@ -1,0 +1,6 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/mission_feedback.gd" id="1"]
+
+[node name="MissionFeedback" type="Control"]
+script = ExtResource("1")

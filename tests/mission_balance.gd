@@ -1,7 +1,9 @@
 extends RefCounted
 
 func run(game: Node3D) -> void:
-	assert(is_equal_approx(game.MOVE_SPEED, 3.78 * 1.03))
+	assert(is_equal_approx(game.MOVE_SPEED, 3.8934 * 1.33))
+	assert(game.R == 32 and game.terrain.R == game.R)
+	assert(game.astronaut.has_node("Helmet") and game.mission_map.game == game)
 	assert(not InputMap.has_action("run"))
 	var feedback: Control = game.feedback
 	feedback.set_link(true)
@@ -44,7 +46,7 @@ func run(game: Node3D) -> void:
 	game.energy_charge = 100
 	game._update_hud(0)
 	assert(game.power_label.modulate.a == 1)
-	var writer := preload("res://scripts/typewriter.gd").new()
+	var writer := preload("res://scripts/ui/typewriter.gd").new()
 	writer.begin(feedback.dialogue, "Estamos chegando.")
 	assert(feedback.dialogue.visible_characters == 0)
 	writer.advance(0.04)

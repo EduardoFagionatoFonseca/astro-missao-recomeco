@@ -13,7 +13,7 @@ Os efeitos são sintetizados no Godot. As duas músicas de exploração/base sã
 - Digitação: pulsos de 35 ms, baixos e espaçados, somente enquanto aparecem letras.
 - Derrota: acorde grave descendente de 1,5 segundo, em canal próprio.
 
-Os efeitos ficam em `scripts/event_audio.gd`, com geração determinística e canais separados. A engrenagem do menu e **Som**, durante a partida, abrem quatro volumes independentes: geral, músicas, interações e avisos. Zero silencia somente o canal escolhido; os ganhos persistem em `user://audio.cfg`. Configurações e minigames não suspendem a sobrevivência. A coleta não interrompe os avisos. Os diálogos de rádio são textos na interface, sem voz gravada.
+Os efeitos ficam em `scripts/audio/event_audio.gd`, com geração determinística e canais separados. A engrenagem do menu e **Som**, durante a partida, abrem quatro volumes independentes: geral, músicas, interações e avisos. Zero silencia somente o canal escolhido; os ganhos persistem em `user://audio.cfg`. Configurações e minigames não suspendem a sobrevivência. A coleta não interrompe os avisos. Os diálogos de rádio são textos na interface, sem voz gravada.
 
 O ganho nominal da música externa é 0,16 (antes 0,316) e o da base é 0,24. Durante radiação ativa, ambos recebem multiplicador 0,4; após o evento, o volume nominal retorna. A escolha de volume do jogador continua sendo respeitada.
 

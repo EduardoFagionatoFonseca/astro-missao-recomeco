@@ -1,0 +1,6 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/gameplay/mission_progression.gd" id="1"]
+
+[node name="MissionProgression" type="Node"]
+script = ExtResource("1")
