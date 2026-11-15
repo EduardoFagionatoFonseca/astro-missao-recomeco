@@ -18,13 +18,13 @@ const SOLAR_SHELTER_TIME := 3.0
 
 @export_group("Ciclos de eventos")
 @export_range(1.0, 600.0, 0.5) var SOLAR_INTERVAL: float = 100.0
-@export_range(1.0, 60.0, 0.5) var SOLAR_WARNING: float = 16.0
-@export_range(1.0, 60.0, 0.5) var SOLAR_DURATION: float = 9.0
+@export_range(1.0, 60.0, 0.5) var SOLAR_WARNING: float = 5.0
+@export_range(1.0, 60.0, 0.5) var SOLAR_DURATION: float = 12.0
 @export_range(1.0, 600.0, 0.5) var ENERGY_INTERVAL: float = 63.75
 @export_range(1.0, 600.0, 0.5) var SIGNAL_INTERVAL: float = 85.0
 
 @export_group("Movimentação")
-@export_range(0.1, 20.0, 0.01) var MOVE_SPEED: float = 3.8934 * 1.33
+@export_range(0.1, 20.0, 0.01) var MOVE_SPEED: float = 5.8401
 @export_range(2.0, 12.0, 0.1) var THIRD_PERSON_DISTANCE := 8.0
 @export_range(1.0, 10.0, 0.1) var THIRD_PERSON_HEIGHT := 6.6
 @export_range(35.0, 75.0, 1.0) var THIRD_PERSON_FOV := 44.0
@@ -922,8 +922,9 @@ func _update_indoor_movement(delta: float) -> void:
 
 func _update_solar_notices() -> void:
 	if not communications_online: return
-	if solar_phase == "warning":
-		feedback.transmit("solar_warning_%d" % solar_cycle, "Névoa solar a caminho. Entre no abrigo!", true, feedback.AXIOS, true, true)
+	if solar_phase == "warning" and solar_clock >= SOLAR_WARNING - 5:
+		var seconds := ceili(SOLAR_WARNING - solar_clock)
+		feedback.transmit("solar_warning_%d" % solar_cycle, tr("Radiação em %d s. Entre no abrigo.") % seconds, true, feedback.AXIOS, true, true)
 
 func _update_energy(delta: float) -> void:
 	$MissionProgression.advance(delta)

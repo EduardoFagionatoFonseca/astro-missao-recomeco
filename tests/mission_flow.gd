@@ -43,7 +43,7 @@ func run(game: Node3D) -> void:
 	assert(game.feedback.seen.has(forecast) and game.feedback.current_time == 0)
 	game.feedback.active = true
 	game.feedback.tick(0.02)
-	assert(game.feedback.dialogue.text.contains("Névoa solar") and game.feedback.speaker.text == game.feedback.AXIOS)
+	assert(game.feedback.dialogue.text.contains("Radiação em 5 s") and game.feedback.speaker.text == game.feedback.AXIOS)
 	game._update_solar_notices()
 	assert(game.feedback.current_time > 0) # Does not keep interrupting itself.
 	game.feedback.seen.erase(forecast)
@@ -52,7 +52,7 @@ func run(game: Node3D) -> void:
 	game._update_solar_notices()
 	assert(not game.feedback.seen.has(forecast))
 	game._update_hud(0)
-	assert(game.survival_timer.visible and game.survival_timer_label.text == "NÉVOA SOLAR EM   16,0 s")
+	assert(game.survival_timer.visible and game.survival_timer_label.text == "NÉVOA SOLAR EM   5,0 s")
 	game.communications_online = true
 	game.feedback.set_link(true)
 	game.solar_phase = "active"

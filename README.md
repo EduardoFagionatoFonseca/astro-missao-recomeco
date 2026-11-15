@@ -2,7 +2,7 @@
 
 Uma miniaventura cozy 3D no Godot 4.7.2. Isolado em Marte, explore o planeta, mantenha o abrigo funcionando e transmita sua localização para sua tripulação voltar. Inclui exportação para navegador e controles de celular.
 
-Escolha **Fácil, Médio ou Difícil** antes de começar. O consumo de reservas e a frequência de panes e radiação usam multiplicadores de 0,8 / 1 / 1,2, acrescidos gradualmente de até 35% conforme os 22 itens são coletados. O aviso solar de 16 s e a resistência à exposição de 3 s valem em todas as dificuldades. Uma rota e uma seta no minimapa orientam o retorno ao abrigo a cada tempestade, mesmo sem rádio.
+Escolha **Fácil, Médio ou Difícil** antes de começar. O consumo de reservas e a frequência de panes e radiação usam multiplicadores de 0,8 / 1 / 1,2, acrescidos gradualmente de até 35% conforme os 22 itens são coletados. O aviso solar de 5 s e a resistência à exposição de 3 s valem em todas as dificuldades. Uma rota e uma seta no minimapa orientam o retorno ao abrigo a cada tempestade, mesmo sem rádio.
 
 A orientação mostra um objetivo por vez, priorizando a sobrevivência e a menor reserva. A rota acompanha o terreno, com uma folga visual em torno do astronauta, e termina no horizonte se o destino estiver no outro hemisfério. No **fácil**, o guia acompanha a missão até o resgate. No **médio/difícil**, orienta as duas primeiras peças e a primeira necessidade de oxigênio, comida, energia e transmissão. No navegador, o canvas acompanha o viewport visível, a densidade de pixels, áreas seguras, rotação e mudanças da barra de endereço.
 
@@ -13,7 +13,7 @@ O idioma padrão é inglês. Em **Settings → Language**, escolha **Português*
 No Windows, abra **Jogar.cmd**. O iniciador usa o Godot instalado na pasta Downloads deste computador, no PATH ou na variável `GODOT_EXE`. Para editar, importe `project.godot` no Godot 4.7 e pressione F5. Não há dependências de rede ou plugins. Para entender a árvore de cenas e onde ajustar cada parte, consulte [docs/EDITING.md](docs/EDITING.md).
 
 - WASD ou setas: caminhar por toda a superfície esférica.
-- Espaço: saltar sobre bordas e subir plataformas baixas. A caminhada é de **5,18 m/s**, chegando a **6,47 m/s** com o rover.
+- Espaço: saltar sobre bordas e subir plataformas baixas. A caminhada é de **5,84 m/s**, chegando a **7,30 m/s** com o rover.
 - E: recolher, entrar/sair da base, usar os painéis ou embarcar na nave.
 - M: ampliar o minimapa.
 - E na estufa: consumir uma refeição e reabastecer alimentos.
@@ -49,7 +49,7 @@ Oxigênio e alimento exigem viagens de reabastecimento: a base com energia repõ
 
 Com dificuldade média e sem materiais coletados, uma reserva cheia dura cerca de **89 segundos de O₂** e **135 segundos de comida**. Internamente vão até 105 unidades; a interface continua mostrando 100% quando cheias. Barras ficam vermelhas e pulsam quando baixas; avisos locais na tela aparecem em 25% e 12%, mesmo sem rádio, e voltam a funcionar após reabastecer. A partir de 12%, contagens regressivas mostram o tempo restante até a derrota por fome ou falta de O₂, incluindo os três segundos de tolerância após zerar. A recuperação de O₂ no abrigo energizado remove sua contagem; reabastecer a comida remove a de fome.
 
-Depois do período calmo, o traje dá um aviso de **16 segundos**, seguido de até **9 segundos** de névoa. Com sinal, AXIOS também anuncia o alerta. Se entrar na base enquanto o aviso estiver correndo, a névoa começa assim que você estiver protegido e termina em **3 segundos**. Se a névoa já tiver começado, restam no máximo 3 segundos. A contagem de dentro mostra quando é seguro sair. **Só o interior protege**. Três segundos de exposição contínua causam derrota, e entrar no abrigo zera a exposição.
+Depois do período calmo, o traje dá um aviso de **5 segundos**, seguido de até **12 segundos** de névoa. Com sinal, AXIOS também anuncia o alerta. Se entrar na base enquanto o aviso estiver correndo, a névoa começa assim que você estiver protegido e termina em **3 segundos**. Se a névoa já tiver começado, restam no máximo 3 segundos. A contagem de dentro mostra quando é seguro sair. **Só o interior protege**. Três segundos de exposição contínua causam derrota, e entrar no abrigo zera a exposição.
 
 O₂ e alimento ficam progressivamente vermelhos e pulsam suavemente quando baixos. Energia também pulsa em vermelho aos 30% ou menos. Um aviso de dois tons, diferente do sol, soa em 25% e 12%; na faixa crítica, pode repetir a cada oito segundos. Energia e desconexão têm sons próprios. Mensagens aparecem a 70 caracteres por segundo com digitação discreta. Coletas tocam notas ascendentes; derrota toca um acorde descendente. Os efeitos são sintetizados originalmente; as duas músicas de ambiente foram fornecidas pelo usuário e estão identificadas em [assets/audio/README.md](assets/audio/README.md). A arte do menu e seu prompt estão em [docs/MENU_ART.md](docs/MENU_ART.md).
 
