@@ -70,3 +70,23 @@ func run(game: Node3D) -> void:
 	game.altitude = 0
 	game.avatar.position = Vector3.UP * game.R
 	print("PASS: ledge blocks walking, moving multi-touch jump reaches/lands on ledge, elevated pickup reach, edge fall, crater depth, 8 normalized mobile directions and focus cancellation")
+	_check_exploration_camera(game)
+
+func _check_exploration_camera(game: Node3D) -> void:
+	game._align(game.avatar, game.normal, game.north)
+	game._update_third_person_camera(false)
+	game.pad = Vector2.RIGHT
+	for step in range(90): game._update_movement(1.0 / 60.0)
+	var up: Vector3 = game.normal
+	var camera_heading: Vector3 = (-game.camera.global_basis.z).slide(up).normalized()
+	assert(up.x > 0.2)
+	assert(camera_heading.dot(game.north) > 0.99)
+	assert(absf(camera_heading.dot(-game.avatar.basis.z)) < 0.1)
+	game.pad = Vector2.ZERO
+	game.normal = Vector3.UP
+	game.north = Vector3.FORWARD
+	game.altitude = 0.0
+	game.avatar.position = Vector3.UP * game.R
+	game._align(game.avatar, game.normal, game.north)
+	game._update_third_person_camera(false)
+	print("PASS: exploration camera keeps its compass heading while the astronaut walks sideways")

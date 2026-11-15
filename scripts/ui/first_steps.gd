@@ -48,7 +48,7 @@ func update_guide(state: Node3D, _delta: float) -> void:
 		if started.has(key) and resolved[key]:
 			done[key] = true
 			started.erase(key)
-		if needs[key] and not resolved[key] and (continuous or not done.has(key)): started[key] = true
+		if needs[key] and not resolved[key] and (continuous or key == "solar" or not done.has(key)): started[key] = true
 	var priorities := {"solar": -100.0 if game.solar_phase == "active" else -20.0, "oxygen": oxy, "food": food, "energy": float(game.energy_charge) + 10, "signal": 110.0, "parts": 150.0}
 	if game.solar_phase == "active": priorities.solar = -200 + (game.EXPOSURE_LIMIT - game.exposure) * 10
 	if oxy <= 0: priorities.oxygen = -200 + (game.VITAL_GRACE - game.oxygen_empty_time) * 10
@@ -56,24 +56,26 @@ func update_guide(state: Node3D, _delta: float) -> void:
 	if not game.energy_ready: priorities.energy = minf(priorities.energy, float(priorities.oxygen) - 1)
 	var best := INF
 	for key in priorities:
-		if not started.has(key) or (done.has(key) and not continuous) or resolved[key]: continue
+		if not started.has(key) or (done.has(key) and not continuous and key != "solar") or resolved[key]: continue
 		if float(priorities[key]) < best:
 			best = priorities[key]
 			objective_id = key
 	if objective_id.is_empty() and continuous:
-		if game.found[1] >= game.GOALS[1] and game.communications_online and game.signal_transmitted and game.collected < game.TOTAL: objective_id = "supplies"
+		if game.found[1] >= game.GOALS[1] and game.communications_online and game.signal_transmitted and game.collected < game.TOTAL:
+			objective_id = "photos" if game._rover_unlocked() else "fuel"
 		elif game.collected >= game.TOTAL: objective_id = "rescue"
 	if objective_id.is_empty(): return
-	caption = {"solar": "Entre no abrigo", "oxygen": "Recupere oxigênio", "energy": "Repare a energia", "food": "Encontre comida", "signal": "Restaure o sinal", "parts": "Reúna peças", "supplies": "Reúna fotos e combustível", "rescue": "Aguarde a nave"}[objective_id]
+	caption = {"solar": "Entre no abrigo", "oxygen": "Recupere oxigênio", "energy": "Repare a energia", "food": "Encontre comida", "signal": "Restaure o sinal", "parts": "Reúna peças", "fuel": "Colete os combustíveis", "photos": "Recupere as fotos", "rescue": "Aguarde a nave"}[objective_id]
 	destination = game.camp_normal * game.R
 	if objective_id == "food":
 		destination = game.base_room.position + game.base_room.station_positions["exit"] if game.inside else game.garden_normal * game.R
-	elif objective_id in ["parts", "supplies"]:
+	elif objective_id in ["parts", "fuel", "photos"]:
 		if game.inside: destination = game.base_room.position + game.base_room.station_positions["exit"]
 		else:
 			var closest := -2.0
+			var kind: int = {"parts": game.ItemKind.PART, "fuel": game.ItemKind.FUEL, "photos": game.ItemKind.PHOTO}[objective_id]
 			for item in game.items:
-				if not item.taken and game._item_available(item) and (objective_id == "supplies" or item.kind == 1) and item.normal.dot(game.normal) > closest:
+				if not item.taken and item.kind == kind and game._item_available(item) and item.normal.dot(game.normal) > closest:
 					closest = item.normal.dot(game.normal)
 					destination = item.node.global_position
 	elif objective_id == "rescue" and game.ship_landed:
@@ -120,15 +122,14 @@ func _build_route() -> void:
 			if not _append_route_point(camera.unproject_position(world), player_bounds): break
 
 func _append_route_point(point: Vector2, player_bounds: Rect2) -> bool:
-	if not game.first_person or game.inside:
-		if player_bounds.has_point(point): return route.is_empty()
-		if not route.is_empty():
-			var start := route[-1]
-			var corner := player_bounds.position
-			var end := player_bounds.end
-			var edges := [corner, Vector2(end.x, corner.y), end, Vector2(corner.x, end.y)]
-			for i in range(edges.size()):
-				if Geometry2D.segment_intersects_segment(start, point, edges[i], edges[(i + 1) % edges.size()]) != null: return false
+	if player_bounds.has_point(point): return route.is_empty()
+	if not route.is_empty():
+		var start := route[-1]
+		var corner := player_bounds.position
+		var end := player_bounds.end
+		var edges := [corner, Vector2(end.x, corner.y), end, Vector2(corner.x, end.y)]
+		for i in range(edges.size()):
+			if Geometry2D.segment_intersects_segment(start, point, edges[i], edges[(i + 1) % edges.size()]) != null: return false
 	route.append(point)
 	return true
 

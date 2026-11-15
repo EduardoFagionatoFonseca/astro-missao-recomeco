@@ -212,7 +212,8 @@ func _build_camp() -> void:
 	_box(camp, Vector3(0.36, 0.32, 0.05), game.MINT, Vector3(-0.8, 0.36, -1.0))
 	_asset("satelliteDish_detailed", camp, 1.2).position = Vector3(1.2, 0, 0)
 	_asset("machine_generator", camp, 0.6).position = Vector3(-1.6, 0, 1.0)
-	_asset("rover", camp, 0.5).position = Vector3(1.4, 0, 1.6)
+	game.rover = _asset("rover", camp, 0.65)
+	game.rover.position = Vector3(1.4, 0, 1.6)
 	for i in range(2):
 		var panel := _box(camp, Vector3(0.7, 0.07, 0.9), Color("648eab"), Vector3(-2.2 - i * 0.8, 0.32, 0))
 		panel.rotation.z = -0.2

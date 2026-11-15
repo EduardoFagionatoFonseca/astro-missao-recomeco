@@ -1,9 +1,8 @@
 extends Node
 signal language_changed
-signal camera_changed
-var chase_camera := false
 var difficulty := 1
-var language := "pt_BR"
+var language := DEFAULT_LANGUAGE
+const DEFAULT_LANGUAGE := "en"
 const LEVELS := [0.8, 1.0, 1.2]
 
 func _ready() -> void:
@@ -21,11 +20,11 @@ func _ready() -> void:
 	var config := ConfigFile.new()
 	config.load("user://game.cfg")
 	difficulty = clampi(int(config.get_value("game", "difficulty", 1)), 0, 2)
-	chase_camera = bool(config.get_value("game", "chase_camera", false))
-	set_language(str(config.get_value("game", "language", "pt_BR")))
+	language = _supported_language(str(config.get_value("game", "language", DEFAULT_LANGUAGE)))
+	TranslationServer.set_locale(language)
 
 func set_language(value: String) -> void:
-	language = value if value in ["pt_BR", "en"] else "pt_BR"
+	language = _supported_language(value)
 	TranslationServer.set_locale(language)
 	_save()
 	language_changed.emit()
@@ -34,16 +33,13 @@ func set_difficulty(value: int) -> void:
 	difficulty = clampi(value, 0, 2)
 	_save()
 
-func set_chase_camera(enabled: bool) -> void:
-	chase_camera = enabled
-	_save()
-	camera_changed.emit()
+func _supported_language(value: String) -> String:
+	return value if value in ["pt_BR", "en"] else DEFAULT_LANGUAGE
 
 func _save() -> void:
 	var config := ConfigFile.new()
 	config.set_value("game", "language", language)
 	config.set_value("game", "difficulty", difficulty)
-	config.set_value("game", "chase_camera", chase_camera)
 	config.save("user://game.cfg")
 
 func pressure(progress: float) -> float:

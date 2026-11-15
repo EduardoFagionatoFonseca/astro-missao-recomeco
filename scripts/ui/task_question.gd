@@ -95,8 +95,8 @@ func _render() -> void:
 	source.text = entry.source
 	source.uri = entry.url
 	source.visible = answered
-	proceed.text = tr("Continuar missão")
-	proceed.visible = answered
+	proceed.text = tr("Continuar missão") if answered else tr("Pular pergunta")
+	proceed.visible = answered or current_task == "radiation"
 	if answered: proceed.grab_focus()
 
 func _answer(index: int) -> void:
@@ -110,7 +110,7 @@ func _answer(index: int) -> void:
 	_render()
 
 func _close() -> void:
-	if not answered: return
+	if not answered and current_task != "radiation": return
 	completed[current_task] = true
 	current_task = ""
 	hide()

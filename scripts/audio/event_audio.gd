@@ -1,7 +1,7 @@
 extends Node
 ## Original event sounds. Separate channels keep life support distinct from solar weather.
 const RATE := 22050
-const LEVELS := {"solar": -13.0, "fog": -17.0, "vitals": -8.0, "energy": -12.0, "disconnect": -11.0, "radio": -19.0, "typing": -25.0, "collect": -8.0, "death": -9.0}
+const LEVELS := {"forecast": -11.0, "solar": -13.0, "fog": -17.0, "vitals": -8.0, "energy": -12.0, "disconnect": -11.0, "radio": -19.0, "typing": -25.0, "collect": -8.0, "photo": -10.0, "death": -9.0}
 var players: Dictionary = {}
 var muted := false
 
@@ -9,7 +9,7 @@ func _ready() -> void:
 	for kind: String in LEVELS:
 		var player := AudioStreamPlayer.new()
 		player.playback_type = AudioServer.PLAYBACK_TYPE_STREAM
-		player.bus = "Interactions" if kind in ["collect", "typing"] else "Alerts"
+		player.bus = "Interactions" if kind in ["collect", "photo", "typing"] else "Alerts"
 		player.stream = _synthesize(kind)
 		player.volume_db = LEVELS[kind]
 		add_child(player)
@@ -31,7 +31,7 @@ func set_paused(value: bool) -> void:
 	for player: AudioStreamPlayer in players.values(): player.stream_paused = value
 
 func _synthesize(kind: String) -> AudioStreamWAV:
-	var seconds: float = {"solar": 3.6, "fog": 2.4, "vitals": 0.7, "energy": 0.9, "disconnect": 0.85, "radio": 0.24, "typing": 0.035, "collect": 0.48, "death": 1.5}[kind]
+	var seconds: float = {"forecast": 0.82, "solar": 3.6, "fog": 2.4, "vitals": 0.7, "energy": 0.9, "disconnect": 0.85, "radio": 0.24, "typing": 0.035, "collect": 0.48, "photo": 0.18, "death": 1.5}[kind]
 	var data := PackedByteArray()
 	data.resize(int(RATE * seconds) * 2)
 	var random := RandomNumberGenerator.new()
@@ -43,6 +43,11 @@ func _synthesize(kind: String) -> AudioStreamWAV:
 		low = low * 0.92 + noise * 0.08
 		var sample := 0.0
 		match kind:
+			"forecast":
+				var phase := fmod(t, 0.27)
+				if phase < 0.18:
+					var frequency := 440.0 + floorf(t / 0.27) * 130.0
+					sample = sin(TAU * frequency * phase) * sin(PI * phase / 0.18) * 0.42
 			"solar":
 				# Distant explosion: low thump, filtered dust and three fading echoes.
 				for echo in range(4):
@@ -79,6 +84,10 @@ func _synthesize(kind: String) -> AudioStreamWAV:
 					var frequency: float = [784.0, 987.77, 1174.66][note]
 					var envelope := (1 - exp(-age * 700)) * exp(-age * 12)
 					sample += (sin(TAU * frequency * age) * 0.25 + sin(TAU * frequency * 2 * age) * 0.035) * envelope
+			"photo":
+				var first_click := exp(-t * 140.0)
+				var second_click := exp(-(t - 0.055) * 200.0) if t >= 0.055 else 0.0
+				sample = (noise - low + sin(TAU * 840.0 * t) * 0.2) * (first_click * 0.7 + second_click * 0.45)
 			"death":
 				var envelope := (1 - exp(-t * 60)) * exp(-t * 2.7)
 				var frequency := 210.0 * t - 48.0 * t * t

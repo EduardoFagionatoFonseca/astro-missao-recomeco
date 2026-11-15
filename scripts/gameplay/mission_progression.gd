@@ -29,7 +29,7 @@ func advance(delta: float) -> void:
 			game.signal_failures += 1
 			game.feedback.set_link(false)
 			game.event_audio.play("disconnect")
-			game.feedback.notice_message("comm_tutorial", "Sem sinal. Recursos e avisos ocultos.", false)
+			game.feedback.notice_message("comm_tutorial", "Sem sinal. Recursos da missão e mensagens do rádio ocultos.", false)
 
 func power_repaired() -> void:
 	game.energy_ready = true
@@ -47,7 +47,8 @@ func signal_sent() -> void:
 	game.signal_clock = 0
 	game._chime(880)
 	if game.signal_transmitted:
-		game.feedback.transmit("signal", "Sinal recebido. Recursos localizados.")
+		var signal_text := "Sinal recebido. Pontos de foto localizados." if game._rover_unlocked() else "Sinal recebido. Combustíveis localizados."
+		game.feedback.transmit("signal", signal_text)
 	game._sync_resource_visibility()
 	game._try_rescue()
 	game._update_controls()

@@ -2,19 +2,20 @@
 
 Uma miniaventura cozy 3D no Godot 4.7.2. Isolado em Marte, explore o planeta, mantenha o abrigo funcionando e transmita sua localização para sua tripulação voltar. Inclui exportação para navegador e controles de celular.
 
-Escolha **Fácil, Médio ou Difícil** antes de começar. O consumo de reservas e a frequência de panes/radiação usam multiplicadores de 0,8 / 1 / 1,2, acrescidos gradualmente de até 35% conforme os 22 itens são coletados. A janela de aviso solar de 5 s e a resistência de 3 s permanecem constantes. Uma rota estática e uma seta no minimapa orientam as duas primeiras peças de antena e a primeira necessidade de oxigênio, comida, energia, transmissão e abrigo solar. Após resolver cada necessidade, sua seta não reaparece naquela partida.
+Escolha **Fácil, Médio ou Difícil** antes de começar. O consumo de reservas e a frequência de panes e radiação usam multiplicadores de 0,8 / 1 / 1,2, acrescidos gradualmente de até 35% conforme os 22 itens são coletados. O aviso solar de 5 s e a resistência à exposição de 3 s valem em todas as dificuldades. Uma rota e uma seta no minimapa orientam o retorno ao abrigo a cada tempestade, mesmo sem rádio.
 
-A orientação mostra um objetivo por vez, priorizando a sobrevivência e a menor reserva. A rota acompanha o terreno, com uma folga visual em torno do astronauta, e termina no horizonte se o destino estiver no outro hemisfério. No **fácil**, objetivos voltam sempre que necessários e acompanham coleta, suprimentos e resgate até o final; no **médio/difícil**, cada necessidade é orientada somente na primeira ocorrência. O guia inicial apresenta recuperar oxigênio e encontrar comida como objetivos. No navegador, o canvas acompanha o viewport visível, a densidade de pixels, áreas seguras, rotação e mudanças da barra de endereço.
+A orientação mostra um objetivo por vez, priorizando a sobrevivência e a menor reserva. A rota acompanha o terreno, com uma folga visual em torno do astronauta, e termina no horizonte se o destino estiver no outro hemisfério. No **fácil**, o guia acompanha a missão até o resgate. No **médio/difícil**, orienta as duas primeiras peças e a primeira necessidade de oxigênio, comida, energia e transmissão. No navegador, o canvas acompanha o viewport visível, a densidade de pixels, áreas seguras, rotação e mudanças da barra de endereço.
 
-Nas configurações, **Português / English** altera menus, guia, HUD, minigames, mensagens e legendas dos vídeos inicial/final. Os vídeos originais não têm fala nem textos gravados na imagem; usam legendas traduzidas. Idioma e dificuldade ficam salvos entre sessões.
+O idioma padrão é inglês. Em **Settings → Language**, escolha **Português** ou **English** para menus, guia, HUD, minigames, mensagens e legendas dos vídeos inicial/final. Os vídeos originais não têm fala nem textos gravados na imagem; usam legendas traduzidas. Idioma e dificuldade ficam salvos entre sessões.
 
 ## Jogar
 
 No Windows, abra **Jogar.cmd**. O iniciador usa o Godot instalado na pasta Downloads deste computador, no PATH ou na variável `GODOT_EXE`. Para editar, importe `project.godot` no Godot 4.7 e pressione F5. Não há dependências de rede ou plugins. Para entender a árvore de cenas e onde ajustar cada parte, consulte [docs/EDITING.md](docs/EDITING.md).
 
 - WASD ou setas: caminhar por toda a superfície esférica.
-- Espaço: saltar sobre bordas e subir plataformas baixas. Movimento em velocidade fixa de 5,8401 m/s; não há corrida.
+- Espaço: saltar sobre bordas e subir plataformas baixas. A caminhada é de **5,84 m/s**, chegando a **7,30 m/s** com o rover.
 - E: recolher, entrar/sair da base, usar os painéis ou embarcar na nave.
+- M: ampliar o minimapa.
 - E na estufa: consumir uma refeição e reabastecer alimentos.
 - Esc: abrir ou fechar configurações, fechar o índice ou sair do minigame. A engrenagem também abre as configurações.
 - Celular: joystick e botões aparecem automaticamente; jogue na horizontal. A orientação vertical suspende a partida.
@@ -23,15 +24,15 @@ O menu abre com arte marciana 2D e composição central, **Começar** em bege al
 
 Começar apresenta um vídeo original de 22 segundos com trilha e legendas. Pular, Espaço, Enter ou Esc abrem o guia da missão. O guia ocupa cerca de 70% da tela e tem duas páginas: **Próximo** e **Começar**. Recursos e eventos ficam suspensos até Começar. Reiniciar após derrota retorna ao menu. Cada nova missão começa pelo vídeo. Embarcar inicia uma cutscene de decolagem de 14 segundos, também pulável; ao terminar ou pular, o jogo retorna automaticamente ao menu principal, pronto para uma nova missão.
 
-Na primeira conclusão de cada tarefa de energia, antena, oxigênio, estufa e proteção solar, aparece uma pergunta curta em português ou inglês. A resposta libera uma explicação e o link da fonte da NASA.
+Na primeira conclusão de cada tarefa de energia, antena, oxigênio, estufa e proteção solar, aparece uma pergunta curta em português ou inglês. A resposta libera uma explicação e o link da fonte da NASA. A pergunta sobre radiação aparece depois que a névoa passa e pode ser pulada.
 
 ## Um passeio completo
 
 O **Índice de Marte**, no lado esquerdo do HUD, reúne as fotos já recuperadas. Cada foto vem com créditos e fonte. As imagens são incluídas no pacote do jogo. A partida pausa enquanto o índice está aberto.
 
-Em Configurações, **Câmera externa** permite alternar entre a câmera original e o modo experimental que acompanha o astronauta por trás. **Voltar ao menu principal** encerra a missão atual.
+Em Configurações, **Voltar ao menu principal** encerra a missão atual.
 
-Primeiro, apenas as **6 peças de antena** estão disponíveis. Reúna-as e ative a transmissão no terminal da base para localizar **8 fotos de Marte e 8 galões de combustível**. Se a comunicação cair, os recursos restantes ficam invisíveis e não podem ser coletados até restaurar a conexão; os materiais já coletados continuam contabilizados. Os itens estão espalhados por toda a esfera, inclusive no outro hemisfério. Cartões animados mostram interações próximas. A nave começa a aproximação assim que todos os materiais estão reunidos **e a conexão de rádio está ativa**. Aproxime-se e pressione E para embarcar.
+Reúna as **6 peças de antena** e ative a transmissão no terminal da base para localizar **8 galões de combustível**. O último galão ativa o rover do acampamento, que acompanha o astronauta na superfície, aumenta sua velocidade em **25%** e libera as **8 fotos de Marte**. Se a comunicação cair, os combustíveis e pontos de foto ficam ocultos até restaurar a conexão. O inventário e o bônus do rover continuam ativos. A nave se aproxima assim que as oito fotos são recuperadas com o rádio ativo. Aproxime-se e pressione E para embarcar.
 
 Dentro do raio de recuperação de oxigênio, use **Entrar na base**. O interior tem circulação livre, colisão com móveis, painel de energia e terminal de comunicação. A saída preserva sua posição externa e os itens coletados.
 
@@ -42,13 +43,13 @@ A superfície tem crateras rasas, relevos suaves e plataformas de 0,38–0,44 m.
 
 Dentro da base, o O₂ se recupera **se houver energia** e não há dano solar; o alimento continua sendo consumido. A janela fica iluminada durante o aviso e a névoa, apagando quando é seguro sair. A sobrevivência continua durante minigames e configurações. Girar o celular para a vertical ou abrir uma pergunta suspende o consumo e os eventos. Falta de energia interrompe a sintonia da antena. O guia anterior ao início continua sem consumir recursos.
 
-As mensagens da tripulação se limitam ao início, confirmação do sinal e pouso. **Inteligência artificial AXIOS** avisa sobre energia em 30%, a primeira pane e radiação prevista. Sem comunicação, os avisos ligados à antena são descartados, inclusive os já abertos; o primeiro diagnóstico local de desconexão apenas explica que os avisos foram suspensos. A janela e os indicadores físicos continuam funcionando sem rádio.
+As mensagens da tripulação se limitam ao início, confirmação do sinal e pouso. **Inteligência artificial AXIOS** avisa sobre energia em 30%, a primeira pane e radiação prevista. Sem comunicação, as mensagens de rádio são descartadas, inclusive as já abertas. A janela e os alertas do traje continuam funcionando sem rádio.
 
 Oxigênio e alimento exigem viagens de reabastecimento: a base com energia repõe O₂; a estufa oferece refeições com E e não protege da radiação. A derrota encerra a expedição e exige recomeçar do zero.
 
 Com dificuldade média e sem materiais coletados, uma reserva cheia dura cerca de **89 segundos de O₂** e **135 segundos de comida**. Internamente vão até 105 unidades; a interface continua mostrando 100% quando cheias. Barras ficam vermelhas e pulsam quando baixas; avisos locais na tela aparecem em 25% e 12%, mesmo sem rádio, e voltam a funcionar após reabastecer. A partir de 12%, contagens regressivas mostram o tempo restante até a derrota por fome ou falta de O₂, incluindo os três segundos de tolerância após zerar. A recuperação de O₂ no abrigo energizado remove sua contagem; reabastecer a comida remove a de fome.
 
-Após 100 segundos, o céu clareia durante cinco segundos de aviso, seguidos de uma névoa que cobre o planeta inteiro por 12 segundos. O HUD mostra a contagem de **5 segundos até a névoa**, mesmo sem rádio. Com o sinal ativo, o rádio também avisa e dá prioridade ao alerta. Uma explosão com eco marca o início da radiação, seguida de ruído contínuo até o fim, também audível dentro do abrigo. O Sol visual é maior e fica a 180 unidades do centro do planeta; a lua ficou 25% menor. **Só o interior protege**. Três segundos de exposição contínua causam derrota; entrar no abrigo zera a exposição. Uma contagem mostra a resistência restante. Fora dele, a imagem recebe desfoque sutil e bordas alaranjadas que avançam com a exposição, preservando a nitidez da interface.
+Depois do período calmo, o traje dá um aviso de **5 segundos**, seguido de até **12 segundos** de névoa. Com sinal, AXIOS também anuncia o alerta. Se entrar na base enquanto o aviso estiver correndo, a névoa começa assim que você estiver protegido e termina em **3 segundos**. Se a névoa já tiver começado, restam no máximo 3 segundos. A contagem de dentro mostra quando é seguro sair. **Só o interior protege**. Três segundos de exposição contínua causam derrota, e entrar no abrigo zera a exposição.
 
 O₂ e alimento ficam progressivamente vermelhos e pulsam suavemente quando baixos. Energia também pulsa em vermelho aos 30% ou menos. Um aviso de dois tons, diferente do sol, soa em 25% e 12%; na faixa crítica, pode repetir a cada oito segundos. Energia e desconexão têm sons próprios. Mensagens aparecem a 70 caracteres por segundo com digitação discreta. Coletas tocam notas ascendentes; derrota toca um acorde descendente. Os efeitos são sintetizados originalmente; as duas músicas de ambiente foram fornecidas pelo usuário e estão identificadas em [assets/audio/README.md](assets/audio/README.md). A arte do menu e seu prompt estão em [docs/MENU_ART.md](docs/MENU_ART.md).
 

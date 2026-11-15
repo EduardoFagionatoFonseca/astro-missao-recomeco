@@ -156,4 +156,3 @@ func _vital_bar(color: Color) -> ProgressBar:
 	bar.add_theme_stylebox_override("background", track)
 	bar.add_theme_stylebox_override("fill", fill)
 	return bar
-

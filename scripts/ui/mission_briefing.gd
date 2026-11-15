@@ -103,13 +103,13 @@ func _render() -> void:
 			icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 			row.add_child(icon)
 			_text(row, ["8 fotos", "6 peças", "8 combustíveis"][i], 28)
-		_step("DEPOIS, O RESGATE", "O sinal revela fotos e combustível. Reúna tudo para partir.")
-		_text(body, "Um objetivo por vez. O mais urgente vem primeiro.", 24, Color("adb4b8"))
+		_step("DEPOIS, O RESGATE", "O sinal revela o combustível. Colete os 8 para ativar o rover.")
+		_text(body, "Com o rover (+25% de velocidade), reúna as 8 fotos para pedir resgate.", 24, Color("adb4b8"))
 	else:
 		_step("ENERGIA E RESERVAS", "Energia gera O₂. Estufa repõe comida. Repare aos 30%.")
-		_step("MANTENHA O SINAL", "Sem comunicação, recursos restantes e avisos ficam ocultos.")
-		_step("NÉVOA SOLAR", "Janela acesa? Fique dentro. Exposição mata em 3 s.")
-		_text(body, "Fácil: orientação sempre. Médio e difícil: só a primeira vez.", 24, Color("adb4b8"))
+		_step("MANTENHA O SINAL", "Sem sinal, o combustível e os pontos de foto ficam ocultos.")
+		_step("NÉVOA SOLAR", "Ao receber o alerta, entre no abrigo. A névoa passa em até 3 s lá dentro.")
+		_text(body, "No fácil, o guia acompanha toda a missão.", 24, Color("adb4b8"))
 	if page_tween: page_tween.kill()
 	body.modulate.a = 0
 	page_tween = create_tween()

@@ -1,6 +1,10 @@
 extends Node3D
 ## A gentle exploration game on a complete spherical world.
 
+enum ItemKind { PHOTO, PART, FUEL }
+const ROVER_SPEED_MULTIPLIER := 1.25
+const SOLAR_SHELTER_TIME := 3.0
+
 @export_group("Regras e sobrevivência")
 @export_range(1.0, 100.0, 0.5) var R: float = 32.0
 @export var GOALS: Array[int] = [8, 6, 8]
@@ -41,6 +45,7 @@ var normal := Vector3.UP
 var north := Vector3.FORWARD
 var avatar: Node3D
 var astronaut: Node3D
+var rover: Node3D
 var camera: Camera3D
 var items: Array[Dictionary] = []
 var found := [0, 0, 0]
@@ -143,10 +148,10 @@ var qa_clock := 0.0
 var guide: Control
 var task_question: Control
 var oxygen_question_pending := false
+var radiation_question_pending := false
 var mission_map: Control
 var photo_archive: Control
 var returning_to_menu := false
-var first_person := false
 
 func _pressure() -> float:
 	return GameOptions.pressure(float(collected) / TOTAL)
@@ -159,7 +164,7 @@ func _ready() -> void:
 	auto_check = "--smoke-test" in OS.get_cmdline_user_args() and not Engine.has_meta("astro_smoke_completed")
 	if auto_check:
 		GameOptions.difficulty = 1
-		GameOptions.chase_camera = false
+		GameOptions.language = "pt_BR"
 		TranslationServer.set_locale("pt_BR")
 	capture = "--capture" in OS.get_cmdline_user_args() or "--capture-intro" in OS.get_cmdline_user_args() or "--capture-fog" in OS.get_cmdline_user_args() or "--capture-critical" in OS.get_cmdline_user_args() or "--capture-base" in OS.get_cmdline_user_args() or "--capture-power" in OS.get_cmdline_user_args() or "--capture-signal" in OS.get_cmdline_user_args()
 	for arg in OS.get_cmdline_user_args():
@@ -172,6 +177,7 @@ func _ready() -> void:
 	astronaut = _asset("astronautA", avatar, 1.8)
 	# Kenney's astronaut faces +Z; the movement frame faces -Z.
 	astronaut.rotation.y = PI
+	_build_helmet()
 	avatar.position = normal * R
 	_align(avatar, normal, north)
 	camera.fov = THIRD_PERSON_FOV
@@ -321,7 +327,9 @@ func _process(delta: float) -> void:
 		load("res://tests/terrain_mobile.gd").new().run(self)
 		load("res://tests/radio_resources.gd").new().run(self)
 		load("res://tests/progression_guidance.gd").new().run(self)
-		for i in range(TOTAL): _collect(i)
+		for kind in [ItemKind.PART, ItemKind.FUEL, ItemKind.PHOTO]:
+			for i in range(TOTAL):
+				if items[i].kind == kind: _collect(i)
 		assert(collected == TOTAL and found == GOALS and ship != null)
 		ship_timer = 12.0
 		_update_ship(0.1)
@@ -349,7 +357,10 @@ func _process(delta: float) -> void:
 	if inside: base_room.set_power(energy_ready, energy_charge)
 	_update_survival(delta)
 	if dead: return
-	if oxygen_question_pending and controls.enabled:
+	if radiation_question_pending and inside and solar_phase == "calm" and controls.enabled:
+		radiation_question_pending = false
+		_ask_task("radiation")
+	elif oxygen_question_pending and solar_phase == "calm" and controls.enabled:
 		oxygen_question_pending = false
 		_ask_task("oxygen")
 	_update_items(delta)
@@ -361,6 +372,25 @@ func _process(delta: float) -> void:
 
 func _update_movement(delta: float) -> void:
 	$ExplorationSystem.update_movement(delta)
+
+func _build_helmet() -> void:
+	var helmet := Node3D.new()
+	helmet.name = "Helmet"
+	astronaut.add_child(helmet)
+	helmet.position = Vector3(0, 1.45, -0.025)
+	_ball(helmet, 0.56, Color("e3e8eb")).scale.x = 1.06
+	var visor := _ball(helmet, 0.46, Color("263948"), Vector3(0, -0.04, 0.41))
+	visor.scale = Vector3(1, 0.71, 0.53)
+	_ball(helmet, 0.11, Color("94c2d5"), Vector3(-0.17, 0.06, 0.626)).scale = Vector3(1.55, 0.28, 0.2)
+	for side in [-1.0, 1.0]:
+		var hinge := _cylinder(helmet, 0.15, 0.07, Color("d69249"), Vector3(side * 0.57, 0, 0.01))
+		hinge.rotation.z = PI / 2
+
+func _rover_unlocked() -> bool:
+	return found[ItemKind.FUEL] >= GOALS[ItemKind.FUEL]
+
+func _move_speed() -> float:
+	return MOVE_SPEED * ROVER_SPEED_MULTIPLIER if _rover_unlocked() else MOVE_SPEED
 
 func _item_available(item: Dictionary) -> bool:
 	return $ExplorationSystem.item_available(item)
@@ -389,13 +419,6 @@ func _update_ship(delta: float) -> void:
 func _unhandled_key_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.is_pressed() and not event.is_echo():
 		if intro_video.active or outro_video.active or audio_settings.visible or task_question.visible or photo_archive.is_open() or portrait_hint.visible: return
-		if event.physical_keycode == KEY_V and controls.enabled and not inside:
-			first_person = not first_person
-			$ExplorationSystem.chase.reset()
-			_update_camera_mode()
-			feedback.notice_message("camera_mode", "Visão em primeira pessoa (V)" if first_person else "Visão de exploração (V)", false)
-			get_viewport().set_input_as_handled()
-			return
 		if event.physical_keycode == KEY_M and controls.enabled and not inside:
 			mission_map.toggle_expanded()
 			get_viewport().set_input_as_handled()
@@ -542,7 +565,7 @@ func _percent(value: float) -> float:
 func _update_hud(_delta: float) -> void:
 	for i in range(3):
 		counts[i].text = str(found[i]) + "/" + str(GOALS[i])
-		counts[i].get_parent().get_parent().get_parent().modulate.a = 1.0 if i == 1 or (signal_transmitted and communications_online) else 0.45
+		counts[i].get_parent().get_parent().get_parent().modulate.a = 1.0 if $ExplorationSystem.kind_available(i) else 0.45
 		counts[i].add_theme_color_override("font_color", MINT if found[i] == GOALS[i] else MUTED)
 	oxygen_label.text = "O₂   " + str(ceili(_percent(oxygen))) + "%"
 	food_label.text = tr("COMIDA") + "   " + str(ceili(_percent(food))) + "%"
@@ -568,13 +591,9 @@ func _update_hud(_delta: float) -> void:
 	vignette_material.set_shader_parameter("radiation", clampf(exposure / EXPOSURE_LIMIT, 0, 1) if not inside and not dead and solar_phase == "active" else 0.0)
 	_update_survival_timer()
 
-func _update_camera_mode() -> void:
-	var outside_first_person := first_person and not inside
-	astronaut.visible = not outside_first_person
+func _update_camera_fov() -> void:
 	if inside:
 		camera.fov = 44.0
-	elif outside_first_person:
-		camera.fov = 68.0
 	else:
 		camera.fov = 36.0 if controls.mobile else THIRD_PERSON_FOV
 
@@ -609,6 +628,8 @@ func _update_survival_timer() -> void:
 			lines.append(tr("NÉVOA SOLAR EM") + "   %.1f s" % maxf(0.0, solar_remaining))
 		if solar_phase == "active" and not inside:
 			lines.append(tr("RADIAÇÃO") + "   %.1f s" % maxf(0, EXPOSURE_LIMIT - exposure))
+		elif solar_phase == "active" and inside:
+			lines.append(tr("NÉVOA PASSA EM") + "   %.1f s" % maxf(0.0, solar_remaining))
 		if oxygen <= 0.0 and not (_at_camp() and energy_ready):
 			lines.append("O₂   %.1f s" % (oxygen / OXYGEN_RATE + maxf(0, VITAL_GRACE - oxygen_empty_time)))
 		if food <= 0.0:
@@ -618,7 +639,9 @@ func _update_survival_timer() -> void:
 	if GameOptions.language == "pt_BR": survival_timer_label.text = survival_timer_label.text.replace(".", ",")
 	survival_timer.reset_size()
 	var view := get_viewport().get_visible_rect().size
-	survival_timer.position = Vector2((view.x - survival_timer.size.x) / 2, view.y - 170)
+	survival_timer.position = Vector2((view.x - survival_timer.size.x) / 2, view.y - survival_timer.size.y - 14.0)
+	var default_prompt_y: float = view.y - $HUD/HUDBuilder.prompt_bottom_margin
+	prompt.position.y = minf(default_prompt_y, survival_timer.position.y - prompt.size.y - 8.0) if survival_timer.visible else default_prompt_y
 
 func _finish() -> void:
 	if won: return
@@ -679,7 +702,6 @@ func _build_expansion() -> void:
 	hud.add_child(photo_archive)
 	photo_archive.visibility_updated.connect(_update_controls)
 	audio_settings.menu_requested.connect(_return_to_menu)
-	GameOptions.camera_changed.connect($ExplorationSystem.chase.reset)
 	hud.move_child(audio_settings, -1)
 	minigames = hud.get_node("BaseMinigames")
 	minigames.power_repaired.connect(_on_power_repaired)
@@ -733,7 +755,7 @@ func _layout_ui() -> void:
 	objectives_ui.position = Vector2(view.x - ui_layout.objectives_right_margin, ui_layout.objectives_top_margin)
 	controls._layout()
 	mission_map._layout()
-	_update_camera_mode()
+	_update_camera_fov()
 	mute_ui.position = Vector2(view.x - ui_layout.sound_button_right_margin, ui_layout.sound_button_top_margin)
 	mute_ui.custom_minimum_size = ui_layout.sound_button_size
 	prompt.position = Vector2((view.x - 450) / 2, view.y - ui_layout.prompt_bottom_margin)
@@ -807,7 +829,7 @@ func _update_prompt() -> void:
 	else:
 		var near := _nearest()
 		if near >= 0 and _can_reach(items[near]):
-			target = "photo" if items[near].kind == 0 else "collect"
+			target = "photo" if items[near].kind == ItemKind.PHOTO else "collect"
 			text = "Coletar foto" if target == "photo" else "Coletar material"
 	controls.action_text = text if not text.is_empty() else "Interagir"
 	controls.action_available = not target.is_empty()
@@ -845,15 +867,15 @@ func _transition_to(to_inside: bool) -> void:
 	transition_veil.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_update_controls()
 	_update_prompt()
-	if to_inside and solar_phase != "calm": _ask_task("radiation")
 
 func _apply_location(to_inside: bool) -> void:
 	if to_inside:
 		exterior_normal = normal
 		exterior_north = north
 	inside = to_inside
-	_update_camera_mode()
-	if inside: exposure = 0.0
+	_update_camera_fov()
+	if inside: $SurvivalSystem.shelter_from_solar()
+	else: radiation_question_pending = false
 	hop = 0
 	altitude = 0.0 if inside else terrain.height_at(exterior_normal)
 	hop_velocity = 0
@@ -871,7 +893,10 @@ func _apply_location(to_inside: bool) -> void:
 		north = exterior_north
 		avatar.position = normal * (R + altitude)
 		_align(avatar, normal, north)
-		$ExplorationSystem.update_exterior_camera(false, 0.0)
+		_update_third_person_camera(false)
+	if _rover_unlocked():
+		rover.visible = not inside
+		$ExplorationSystem.update_rover(0.0, true)
 	solar_fog.visible = not inside and solar_phase == "active"
 	_update_distant_light()
 	base_room.set_power(energy_ready, energy_charge)
@@ -884,7 +909,7 @@ func _update_indoor_movement(delta: float) -> void:
 	var forward := (-camera.global_basis.z).slide(Vector3.UP).normalized()
 	var right := camera.global_basis.x.slide(Vector3.UP).normalized()
 	var direction := right * input.x + forward * input.y
-	avatar.position = base_room.move_player(avatar.position, direction * MOVE_SPEED * delta)
+	avatar.position = base_room.move_player(avatar.position, direction * _move_speed() * delta)
 	if direction.length() > 0.05:
 		_align(avatar, Vector3.UP, direction)
 		walk += delta * 8
@@ -987,10 +1012,12 @@ func _assert_survival() -> void:
 		_update_radiation(0.8)
 		assert(is_equal_approx(exposure, 0.8) and not dead)
 	_apply_location(true)
-	assert(exposure == 0)
+	assert(exposure == 0 and is_equal_approx(solar_remaining, SOLAR_SHELTER_TIME))
 	_update_radiation(3.1)
-	assert(not dead and exposure == 0)
+	assert(solar_phase == "calm" and not dead and exposure == 0)
 	_apply_location(false)
+	solar_phase = "active"
+	solar_clock = 0
 	_update_radiation(EXPOSURE_LIMIT - 0.01)
 	assert(not dead)
 	_update_radiation(0.02)
@@ -1041,4 +1068,3 @@ func _assert_survival() -> void:
 	alert_audio.stop()
 	_resource_warnings()
 	print("PASS: larger reserves, recovery, grace/death, planet-wide fog, three-second exposure and interior protection")
-

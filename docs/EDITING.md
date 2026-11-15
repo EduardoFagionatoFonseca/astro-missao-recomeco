@@ -33,7 +33,7 @@ Selecione `Astro` em `scenes/main.tscn` para ajustar no Inspetor raio do planeta
 
 ## Interface e arte
 
-Os componentes de interface têm cenas próprias em `scenes/components/` e estão reunidos em `scenes/ui/hud.tscn`. Edite as perguntas e fontes em data/task_questions.json. A tecla `V` alterna entre visão de exploração e primeira pessoa; `M` amplia/reduz o minimapa. Selecione `HUDBuilder` dentro de `scenes/ui/hud.tscn` para ajustar margens e posições no Inspetor.
+Os componentes de interface têm cenas próprias em `scenes/components/` e estão reunidos em `scenes/ui/hud.tscn`. Edite as perguntas e fontes em data/task_questions.json. A tecla `M` amplia ou reduz o minimapa. Selecione `HUDBuilder` dentro de `scenes/ui/hud.tscn` para ajustar margens e posições no Inspetor.
 
 O mundo 3D é gerado na inicialização para distribuir os objetos pela superfície esférica. A montagem está em `scripts/world/world_builder.gd`; a forma do terreno está em `scripts/world/planet_terrain.gd`. As quantidades, a semente, o acampamento, a estufa e a direção do sol são propriedades do nó `World` no Inspetor.
 

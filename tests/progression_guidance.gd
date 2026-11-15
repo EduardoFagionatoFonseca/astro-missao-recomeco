@@ -66,13 +66,17 @@ func run(game: Node3D) -> void:
 	assert(guide.done.has("signal"))
 	game.signal_transmitted = sent
 	game.solar_phase = "warning"
-	game.solar_clock = 5
+	game.solar_clock = 0
+	game.communications_online = false
 	guide.update_guide(game, 0)
 	assert(guide.caption == "Entre no abrigo")
 	game.inside = true
 	guide.update_guide(game, 0)
 	assert(guide.done.has("solar"))
 	game.inside = false
+	guide.update_guide(game, 0)
+	assert(guide.objective_id == "solar")
+	game.communications_online = true
 	game.solar_phase = "calm"
 	game.solar_clock = 0
 	TranslationServer.set_locale("en")

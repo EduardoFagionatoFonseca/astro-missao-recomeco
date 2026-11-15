@@ -8,37 +8,74 @@ func run(game: Node3D) -> void:
 	game.communications_online = true
 	for item in game.items: item.taken = false
 	game._sync_resource_visibility()
-	var rock := -1
-	var fuel := -1
+	var photo := -1
+	var fuels: Array[int] = []
 	for i in range(game.items.size()):
 		var item: Dictionary = game.items[i]
-		assert(item.node.visible == (item.kind == 1))
-		if item.kind == 0: rock = i
-		if item.kind == 2: fuel = i
-	game.normal = game.items[rock].normal
-	assert(game._nearest() != rock)
-	game._collect(rock)
+		assert(item.node.visible == (item.kind == game.ItemKind.PART))
+		if item.kind == game.ItemKind.PHOTO: photo = i
+		if item.kind == game.ItemKind.FUEL: fuels.append(i)
+	var last_fuel: int = fuels.pop_back()
+	game.normal = game.items[photo].normal
+	assert(game._nearest() != photo)
+	game._collect(photo)
 	assert(game.collected == 0)
 	game._on_signal_sent()
-	assert(not game.signal_transmitted and not game.items[rock].node.visible)
+	assert(not game.signal_transmitted and not game.items[photo].node.visible)
 	for i in range(game.items.size()):
-		if game.items[i].kind == 1: game._collect(i)
+		if game.items[i].kind == game.ItemKind.PART: game._collect(i)
 	assert(game.found == [0, 6, 0] and game.collected == 6)
 	game._on_power_repaired()
 	game._on_signal_sent()
-	assert(game.signal_transmitted and game.items[rock].node.visible and game.items[fuel].node.visible)
-	game._collect(rock)
-	assert(game.found == [1, 6, 0])
+	assert(game.signal_transmitted and not game.items[photo].node.visible and game.items[last_fuel].node.visible)
+	for index in fuels: game._collect(index)
+	game._collect(photo)
+	assert(game.found == [0, 6, 7] and not game._rover_unlocked())
+	assert(is_equal_approx(game._move_speed(), game.MOVE_SPEED))
+	assert(not game.items[photo].node.visible and game._nearest() != photo)
 	game._update_energy(game.SIGNAL_INTERVAL + 0.01)
-	assert(not game.communications_online and not game.items[fuel].node.visible)
-	game._collect(fuel)
-	assert(game.found == [1, 6, 0])
+	assert(not game.communications_online and not game.items[last_fuel].node.visible)
+	game._collect(last_fuel)
+	assert(game.found == [0, 6, 7])
 	game._apply_location(true)
 	game._apply_location(false)
-	assert(not game.items[rock].node.visible and not game.items[fuel].node.visible)
+	assert(not game.items[photo].node.visible and not game.items[last_fuel].node.visible)
 	game._on_power_repaired()
 	game._on_signal_sent()
-	assert(not game.items[rock].node.visible and game.items[fuel].node.visible)
+	game.normal = game.items[last_fuel].normal
+	game.altitude = game.terrain.height_at(game.normal)
+	game._interact()
+	assert(game._rover_unlocked() and game.rover.visible and game.rover.get_parent() == game)
+	assert(is_equal_approx(game._move_speed(), game.MOVE_SPEED * 1.25))
+	assert(game.items[photo].node.visible and game.feedback.seen.has("rover_unlocked"))
+	game._apply_location(true)
+	assert(not game.rover.visible and not game.items[photo].node.visible)
+	game._apply_location(false)
+	assert(game.rover.visible and game.items[photo].node.visible)
+	var previous_rover: Vector3 = game.rover.position
+	game.pad = Vector2(0, 1)
+	for step in range(40): game._update_movement(1.0 / 60.0)
+	game.pad = Vector2.ZERO
+	var rover_up: Vector3 = game.rover.position.normalized()
+	assert(game.rover.position.distance_to(previous_rover) > 0.5)
+	assert(absf(game.rover.position.length() - game.R - game.terrain.height_at(rover_up)) < 0.01)
+	assert(game.normal.angle_to(rover_up) * game.R < 3.0)
+	game._update_energy(game.SIGNAL_INTERVAL + 0.01)
+	assert(not game.items[photo].node.visible and game._rover_unlocked() and game.rover.visible)
+	assert(is_equal_approx(game._move_speed(), game.MOVE_SPEED * 1.25))
+	game._on_power_repaired()
+	game._on_signal_sent()
+	game.normal = game.items[photo].normal
+	game.altitude = game.terrain.height_at(game.normal)
+	game._update_prompt()
+	assert(game.prompt_target == "photo")
+	game._interact()
+	assert(game.found == [1, 6, 8] and not game.items[photo].node.visible)
+	assert(game.items[photo].photo in game.photo_archive.unlocked)
+	game.photo_archive.open()
+	assert(game.photo_archive.is_open() and not game.mission_map.visible)
+	game.photo_archive.close()
+	assert(game.mission_map.visible)
 	# Settings keep independent gains but do not stop survival.
 	var before := [game.oxygen, game.food, game.solar_clock, game.energy_clock, game.signal_clock]
 	var previous: float = game.audio_settings.sliders[2].value
@@ -63,4 +100,4 @@ func run(game: Node3D) -> void:
 	game.normal = game.camp_normal
 	game.oxygen = game.MAX_RESERVE
 	game.food = game.MAX_RESERVE
-	print("PASS: antenna discovery, offline collection blocked, collected materials retained, independent audio gains, settings keep survival running and location music")
+	print("PASS: antenna → fuel → rover and photos, ground-following companion, inventory and boost retained offline, settings and audio")

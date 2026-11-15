@@ -5,6 +5,21 @@ var game: Node3D
 func _ready() -> void:
 	game = get_parent()
 
+func shelter_from_solar() -> void:
+	game.exposure = 0.0
+	if game.solar_phase == "calm": return
+	if game.solar_phase == "warning": _start_storm()
+	game.solar_clock = maxf(game.solar_clock, game.SOLAR_DURATION - game.SOLAR_SHELTER_TIME)
+	game.solar_remaining = game.SOLAR_DURATION - game.solar_clock
+	game.radiation_question_pending = true
+
+func _start_storm() -> void:
+	game.solar_phase = "active"
+	game.solar_clock = 0.0
+	game.event_audio.players.forecast.stop()
+	game.event_audio.play("solar")
+	game.event_audio.play("fog")
+
 func update_survival(delta: float) -> void:
 	if game._at_camp() and game.energy_ready:
 		var before: float = game.oxygen
@@ -38,10 +53,10 @@ func update_radiation(delta: float) -> void:
 			match game.solar_phase:
 				"calm":
 					game.solar_phase = "warning"
+					if game.inside: shelter_from_solar()
+					else: game.event_audio.play("forecast")
 				"warning":
-					game.solar_phase = "active"
-					game.event_audio.play("solar")
-					game.event_audio.play("fog")
+					_start_storm()
 				"active":
 					game.solar_phase = "calm"
 					game.solar_cycle += 1
@@ -94,4 +109,3 @@ func update_last_chance(delta: float) -> void:
 	game.food_empty_time = game.food_empty_time + delta if game.food <= 0 else 0.0
 	if game.oxygen_empty_time >= game.VITAL_GRACE or game.food_empty_time >= game.VITAL_GRACE:
 		game._die()
-
